@@ -86,6 +86,7 @@ interface ValidationErrors {
 const ContainerCompanyForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [touchedFields, setTouchedFields] = useState<{[key: string]: boolean}>({});
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationData, setConfirmationData] = useState<{
     companyName: string;
@@ -570,6 +571,12 @@ const ContainerCompanyForm = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleFieldValidation = (fieldName: string, value: any, index?: number) => {
     const fieldKey = index !== undefined ? `${fieldName}_${index}` : fieldName;
+    
+    // Solo validar si el campo ha sido tocado por el usuario
+    if (!touchedFields[fieldKey]) {
+      return;
+    }
+    
     const error = validateField(fieldName, value);
 
     setValidationErrors(prev => {
@@ -581,6 +588,15 @@ const ContainerCompanyForm = () => {
       }
       return newErrors;
     });
+  };
+
+  // Función para marcar un campo como tocado
+  const markFieldAsTouched = (fieldName: string, index?: number) => {
+    const fieldKey = index !== undefined ? `${fieldName}_${index}` : fieldName;
+    setTouchedFields(prev => ({
+      ...prev,
+      [fieldKey]: true
+    }));
   };
 
   const nextStep = () => {
@@ -2155,6 +2171,7 @@ const ContainerCompanyForm = () => {
                 name="frase"
                 value={formData.frase}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('frase')}
                 onBlur={(e) => handleFieldValidation('frase', e.target.value)}
                 placeholder="Tu respuesta"
                 className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
@@ -2173,6 +2190,7 @@ const ContainerCompanyForm = () => {
                 name="pitch"
                 value={formData.pitch}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('pitch')}
                 onBlur={(e) => handleFieldValidation('pitch', e.target.value)}
                 placeholder="Tu respuesta"
                 className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
@@ -2191,6 +2209,7 @@ const ContainerCompanyForm = () => {
                 name="importante"
                 value={formData.importante}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('importante')}
                 onBlur={(e) => handleFieldValidation('importante', e.target.value)}
                 placeholder="Tu respuesta"
                 className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"

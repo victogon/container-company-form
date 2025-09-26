@@ -162,3 +162,12 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
     }
 }
+
+// Configuración para aumentar el límite de tamaño de archivos
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '50mb',
+        },
+    },
+}
