@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { CheckCircle, Upload, Home } from 'lucide-react';
+import { Check, Upload, Home } from 'lucide-react';
 
 interface ConfirmationScreenProps {
   companyName: string;
@@ -20,7 +20,7 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
       <div className="rounded-lg shadow-2xl max-w-md w-full mx-4 overflow-hidden" style={{ backgroundColor: '#1a1a1a', border: '1px solid #817D79' }}>
         {/* Header con ícono de éxito */}
         <div className="p-6 text-center" style={{ backgroundColor: '#1a1a1a' }}>
-          <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: '#F0EFED' }} />
+          <Check className="w-16 h-16 mx-auto mb-4" style={{ color: '#22c55e' }} />
           <h2 className="text-2xl font-bold" style={{ color: '#F0EFED' }}>¡Formulario Enviado!</h2>
           <p className="mt-2" style={{ color: '#817D79' }}>Tu información ha sido procesada exitosamente</p>
         </div>
