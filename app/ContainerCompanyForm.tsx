@@ -151,6 +151,7 @@ const ContainerCompanyForm = () => {
     backgroundColor: "transparent",
     border: "1px solid #817D79",
     color: "#F0EFED",
+    fontSize: "16px",
   };
   const labelStyle = { color: "#F0EFED" };
   const descStyle = { color: "#817D79" };

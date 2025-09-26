@@ -21,7 +21,7 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         {/* Header con ícono de éxito */}
         <div className="p-6 text-center" style={{ backgroundColor: '#1a1a1a' }}>
           <Check className="w-16 h-16 mx-auto mb-4" style={{ color: '#22c55e' }} />
-          <h2 className="text-2xl font-bold" style={{ color: '#F0EFED' }}>¡Formulario Enviado!</h2>
+          <h2 className="text-2xl font-bold" style={{ color: '#F0EFED' }}>¡Formulario enviado!</h2>
           <p className="mt-2" style={{ color: '#817D79' }}>Tu información ha sido procesada exitosamente</p>
         </div>
 
