@@ -186,8 +186,8 @@ const ContainerCompanyForm = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('El archivo es demasiado grande. Máximo 5MB permitido.');
+      if (file.size > 10 * 1024 * 1024) {
+        alert('El archivo es demasiado grande. Máximo 10MB permitido.');
         e.target.value = '';
         return;
       }
@@ -590,6 +590,47 @@ const ContainerCompanyForm = () => {
     });
   };
 
+  // Función para validar solo campos tocados en un paso específico
+  const validateStepWithTouchedFields = (step: number): ValidationErrors => {
+    const allErrors = validateStep(step);
+    const touchedErrors: ValidationErrors = {};
+
+    // Solo incluir errores de campos que han sido tocados
+    Object.keys(allErrors).forEach(fieldKey => {
+      if (touchedFields[fieldKey]) {
+        touchedErrors[fieldKey] = allErrors[fieldKey];
+      }
+    });
+
+    return touchedErrors;
+  };
+
+  // Función para obtener los campos de un paso específico
+  const getFieldsForStep = (step: number): string[] => {
+    switch (step) {
+      case 0:
+        return ['companyName', 'contactPerson', 'phone', 'email', 'logo', 'brandColors'];
+      case 1:
+        return ['address', 'businessHours', 'socialMedia', 'whatsappNumber'];
+      case 2:
+        return ['workAreas', 'foundedYear', 'teamSize', 'specialties', 'companyStory'];
+      case 3:
+        return ['achievements', 'workStyle', 'workTime', 'diferencialCompetitivo'];
+      case 4:
+        return ['ventajas', 'rangoPrecios', 'proyectosRealizados'];
+      case 5:
+        return ['dominioOption', 'dominioName'];
+      case 6:
+        return ['modelos'];
+      case 7:
+        return ['calculadoraOption', 'precioDifOpcion'];
+      case 8:
+        return ['frase', 'importante', 'pitch'];
+      default:
+        return [];
+    }
+  };
+
   // Función para marcar un campo como tocado
   const markFieldAsTouched = (fieldName: string, index?: number) => {
     const fieldKey = index !== undefined ? `${fieldName}_${index}` : fieldName;
@@ -600,8 +641,8 @@ const ContainerCompanyForm = () => {
   };
 
   const nextStep = () => {
-    // Validar el paso actual antes de avanzar
-    const errors = validateStep(currentStep);
+    // Validar solo los campos tocados del paso actual antes de avanzar
+    const errors = validateStepWithTouchedFields(currentStep);
     setValidationErrors(errors);
 
     if (Object.keys(errors).length === 0) {
@@ -635,6 +676,14 @@ const ContainerCompanyForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Marcar todos los campos del paso actual como tocados antes de validar
+    const stepFields = getFieldsForStep(currentStep);
+    const newTouchedFields = { ...touchedFields };
+    stepFields.forEach(field => {
+      newTouchedFields[field] = true;
+    });
+    setTouchedFields(newTouchedFields);
 
     // Validar el paso actual antes de enviar
     const errors = validateStep(currentStep);
@@ -737,6 +786,12 @@ const ContainerCompanyForm = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Manejo específico para error 413 (Payload Too Large)
+        if (response.status === 413) {
+          throw new Error('Los archivos son demasiado grandes. Por favor, reduce el tamaño de las imágenes e intenta nuevamente.');
+        }
+        
         throw new Error(`Error ${response.status}: ${errorData.error || response.statusText}`);
       }
 

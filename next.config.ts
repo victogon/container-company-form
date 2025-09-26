@@ -4,11 +4,12 @@ const nextConfig: NextConfig = {
   experimental: {
     serverComponentsExternalPackages: [],
   },
-  // Aumentar límite de tamaño para archivos
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
+  // Configuración para manejar archivos grandes
+  serverRuntimeConfig: {
+    maxFileSize: 50 * 1024 * 1024, // 50MB
+  },
+  publicRuntimeConfig: {
+    maxFileSize: 50 * 1024 * 1024, // 50MB
   },
 };
 
