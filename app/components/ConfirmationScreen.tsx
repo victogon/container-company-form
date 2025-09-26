@@ -22,7 +22,7 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         <div className="p-6 text-center" style={{ backgroundColor: '#1a1a1a' }}>
           <Check className="w-16 h-16 mx-auto mb-4" style={{ color: '#22c55e' }} />
           <h2 className="text-2xl font-bold" style={{ color: '#F0EFED' }}>¡Formulario enviado!</h2>
-          <p className="mt-2" style={{ color: '#817D79' }}>Tu información ha sido procesada exitosamente</p>
+          <p className="mt-2" style={{ color: '#817D79', fontSize: '16px' }}>Tu información ha sido procesada exitosamente</p>
         </div>
 
         {/* Contenido principal */}
@@ -34,8 +34,8 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
                 <Home className="w-4 h-4" style={{ color: '#F0EFED' }} />
               </div>
               <div>
-                <h3 className="font-semibold" style={{ color: '#F0EFED' }}>Empresa</h3>
-                <p style={{ color: '#817D79' }}>{companyName}</p>
+                <h3 className="font-semibold" style={{ color: '#F0EFED', fontSize: '16px' }}>Empresa</h3>
+                <p style={{ color: '#817D79', fontSize: '16px' }}>{companyName}</p>
               </div>
             </div>
           </div>
@@ -47,18 +47,18 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
                 <Upload className="w-4 h-4" style={{ color: '#F0EFED' }} />
               </div>
               <div>
-                <h3 className="font-semibold" style={{ color: '#F0EFED' }}>Imágenes subidas</h3>
-                <p style={{ color: '#817D79' }}>{filesUploaded} imagen(es) procesada(s)</p>
+                <h3 className="font-semibold" style={{ color: '#F0EFED', fontSize: '16px' }}>Imágenes subidas</h3>
+                <p style={{ color: '#817D79', fontSize: '16px' }}>{filesUploaded} imagen(es) procesada(s)</p>
               </div>
             </div>
           </div>
 
           {/* Mensaje adicional */}
           <div className="text-center py-6">
-            <p className="text-sm mb-4" style={{ color: '#F0EFED' }}>
+            <p className="text-sm mb-4" style={{ color: '#F0EFED', fontSize: '16px' }}>
               Nuestro equipo revisará tu información y se pondrá en contacto contigo.
             </p>
-            <p className="text-xs" style={{ color: '#817D79' }}>
+            <p className="text-xs" style={{ color: '#817D79', fontSize: '14px' }}>
               Puedes cerrar esta pestaña cuando desees.
             </p>
           </div>
