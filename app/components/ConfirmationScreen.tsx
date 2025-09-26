@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Check, Upload, Home } from 'lucide-react';
 
 interface ConfirmationScreenProps {
@@ -12,11 +12,29 @@ interface ConfirmationScreenProps {
 
 const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   companyName,
+  sheetName,
   filesUploaded,
+  onClose,
+  onNewForm,
 }) => {
 
+  // Bloquear scroll del body cuando se muestra la confirmación
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+      style={{ 
+        overflow: 'hidden',
+        height: '100vh',
+        width: '100vw'
+      }}
+    >
       <div className="rounded-lg shadow-2xl max-w-md w-full mx-4 overflow-hidden" style={{ backgroundColor: '#1a1a1a', border: '1px solid #817D79' }}>
         {/* Header con ícono de éxito */}
         <div className="p-6 text-center" style={{ backgroundColor: '#1a1a1a' }}>
