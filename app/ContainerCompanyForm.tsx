@@ -82,11 +82,99 @@ interface FormData {
 interface ValidationErrors {
   [key: string]: string;
 }
-
 const ContainerCompanyForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
+  const totalSteps = 9;
+
+  // Función para comprimir imágenes
+  const compressImage = (file: File, maxSizeMB: number = 2, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        // Calcular nuevas dimensiones manteniendo la proporción
+        const maxWidth = 1200;
+        const maxHeight = 1200;
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Dibujar imagen redimensionada
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Convertir a blob con compresión
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Detectar si es dispositivo móvil
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  // Función genérica para procesar archivos de imagen con compresión automática
+  const processImageFile = async (file: File): Promise<File> => {
+    // Validar tamaño
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
+    }
+
+    // Validar tipo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, GIF, WebP).');
+    }
+
+    let processedFile = file;
+
+    // Comprimir automáticamente en móviles si el archivo es mayor a 2MB
+    if (isMobile() && file.size > 2 * 1024 * 1024) {
+      try {
+        processedFile = await compressImage(file, 2, 0.7);
+        console.log(`Imagen comprimida: ${file.size} bytes → ${processedFile.size} bytes`);
+      } catch (error) {
+        console.error('Error al comprimir imagen:', error);
+        // Si falla la compresión, usar el archivo original
+      }
+    }
+
+    return processedFile;
+  };
+
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [touchedFields, setTouchedFields] = useState<{[key: string]: boolean}>({});
+  const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationData, setConfirmationData] = useState<{
     companyName: string;
@@ -145,8 +233,6 @@ const ContainerCompanyForm = () => {
     { title: "Mensajes y comunicación de la empresa" }
   ];
 
-  const totalSteps = steps.length;
-
   // Estilos
   const inputStyle = {
     backgroundColor: "transparent",
@@ -183,25 +269,19 @@ const ContainerCompanyForm = () => {
     handleFieldValidation(name, newValue);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        alert('El archivo es demasiado grande. Máximo 10MB permitido.');
+      try {
+        const processedFile = await processImageFile(file);
+        setFormData((prev) => ({ ...prev, logo: processedFile }));
+        // Validar el archivo inmediatamente
+        handleFieldValidation('logo', processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
         e.target.value = '';
         return;
       }
-
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        alert('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, GIF, WebP).');
-        e.target.value = '';
-        return;
-      }
-
-      setFormData((prev) => ({ ...prev, logo: file }));
-      // Validar el archivo inmediatamente
-      handleFieldValidation('logo', file);
     } else {
       // Si no hay archivo, validar como vacío
       handleFieldValidation('logo', null);
@@ -232,17 +312,53 @@ const ContainerCompanyForm = () => {
     }));
   };
 
-  const handleModeloImage1Change = (index: number, file: File | null) => {
-    updateModelo(index, "image1", file);
+  const handleModeloImage1Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateModelo(index, "image1", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateModelo(index, "image1", null);
+    }
   };
-  const handleModeloImage2Change = (index: number, file: File | null) => {
-    updateModelo(index, "image2", file);
+  const handleModeloImage2Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateModelo(index, "image2", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateModelo(index, "image2", null);
+    }
   };
-  const handleModeloImage3Change = (index: number, file: File | null) => {
-    updateModelo(index, "image3", file);
+  const handleModeloImage3Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateModelo(index, "image3", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateModelo(index, "image3", null);
+    }
   };
-  const handleModeloImage4Change = (index: number, file: File | null) => {
-    updateModelo(index, "image4", file);
+  const handleModeloImage4Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateModelo(index, "image4", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateModelo(index, "image4", null);
+    }
   };
 
   const addProyectoRow = () => {
@@ -268,17 +384,53 @@ const ContainerCompanyForm = () => {
     }));
   };
 
-  const handleProyectoImage1Change = (index: number, file: File | null) => {
-    updateProyecto(index, "image1", file);
+  const handleProyectoImage1Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateProyecto(index, "image1", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateProyecto(index, "image1", null);
+    }
   };
-  const handleProyectoImage2Change = (index: number, file: File | null) => {
-    updateProyecto(index, "image2", file);
+  const handleProyectoImage2Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateProyecto(index, "image2", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateProyecto(index, "image2", null);
+    }
   };
-  const handleProyectoImage3Change = (index: number, file: File | null) => {
-    updateProyecto(index, "image3", file);
+  const handleProyectoImage3Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateProyecto(index, "image3", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateProyecto(index, "image3", null);
+    }
   };
-  const handleProyectoImage4Change = (index: number, file: File | null) => {
-    updateProyecto(index, "image4", file);
+  const handleProyectoImage4Change = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateProyecto(index, "image4", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateProyecto(index, "image4", null);
+    }
   };
 
   const addClienteRow = () => {
@@ -304,8 +456,17 @@ const ContainerCompanyForm = () => {
     }));
   };
 
-  const handleClienteImageChange = (index: number, file: File | null) => {
-    updateCliente(index, "image", file);
+  const handleClienteImageChange = async (index: number, file: File | null) => {
+    if (file) {
+      try {
+        const processedFile = await processImageFile(file);
+        updateCliente(index, "image", processedFile);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+      }
+    } else {
+      updateCliente(index, "image", null);
+    }
   };
 
   // Funciones de validación por página
@@ -571,12 +732,12 @@ const ContainerCompanyForm = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleFieldValidation = (fieldName: string, value: any, index?: number) => {
     const fieldKey = index !== undefined ? `${fieldName}_${index}` : fieldName;
-    
+
     // Solo validar si el campo ha sido tocado por el usuario
     if (!touchedFields[fieldKey]) {
       return;
     }
-    
+
     const error = validateField(fieldName, value);
 
     setValidationErrors(prev => {
@@ -648,6 +809,16 @@ const ContainerCompanyForm = () => {
     if (Object.keys(errors).length === 0) {
       // No hay errores, puede avanzar
       if (currentStep < totalSteps - 1) {
+        // Limpiar errores del paso siguiente para evitar validación automática
+        const nextStepFields = getFieldsForStep(currentStep + 1);
+        setValidationErrors(prev => {
+          const newErrors = { ...prev };
+          nextStepFields.forEach(field => {
+            delete newErrors[field];
+          });
+          return newErrors;
+        });
+
         setCurrentStep(currentStep + 1);
         setTimeout(() => {
           window.scrollTo(0, 0);
@@ -786,12 +957,12 @@ const ContainerCompanyForm = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         // Manejo específico para error 413 (Payload Too Large)
         if (response.status === 413) {
           throw new Error('Los archivos son demasiado grandes. Por favor, reduce el tamaño de las imágenes e intenta nuevamente.');
         }
-        
+
         throw new Error(`Error ${response.status}: ${errorData.error || response.statusText}`);
       }
 
@@ -1655,7 +1826,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleModeloImage1Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleModeloImage1Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`modelo-image-1-${index}`}
                           />
@@ -1677,7 +1848,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleModeloImage2Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleModeloImage2Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`modelo-image-2-${index}`}
                           />
@@ -1700,7 +1871,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleModeloImage3Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleModeloImage3Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`modelo-image-3-${index}`}
                           />
@@ -1722,7 +1893,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleModeloImage4Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleModeloImage4Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`modelo-image-4-${index}`}
                           />
@@ -1875,7 +2046,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleProyectoImage1Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleProyectoImage1Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`project-image-1-${index}`}
                           />
@@ -1897,7 +2068,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleProyectoImage2Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleProyectoImage2Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`project-image-2-${index}`}
                           />
@@ -1919,7 +2090,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleProyectoImage3Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleProyectoImage3Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`project-image-3-${index}`}
                           />
@@ -1941,7 +2112,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleProyectoImage4Change(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleProyectoImage4Change(index, _e.target.files[0])}
                             className="hidden"
                             id={`project-image-4-${index}`}
                           />
@@ -2060,7 +2231,7 @@ const ContainerCompanyForm = () => {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg"
-                            onChange={(_e) => _e.target.files && handleClienteImageChange(index, _e.target.files[0])}
+                            onChange={async (_e) => _e.target.files && await handleClienteImageChange(index, _e.target.files[0])}
                             className="hidden"
                             id={`cliente-image-${index}`}
                           />
