@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
 import ConfirmationScreen from './components/ConfirmationScreen';
+import { logger } from '../utils/logger';
 
 // Define interfaces for form data structure
 interface Modelo {
@@ -86,6 +87,227 @@ const ContainerCompanyForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = 9;
 
+  // Estado para tracking de tamaño total
+  const [totalImageSize, setTotalImageSize] = useState(0);
+  const [imageCount, setImageCount] = useState(0);
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
+  const [sizeWarningLevel, setSizeWarningLevel] = useState<'info' | 'warning' | 'danger'>('info');
+
+  // Límites y umbrales
+  const MAX_PAYLOAD_SIZE = 45 * 1024 * 1024; // 45MB (dejamos margen de 5MB)
+  const WARNING_THRESHOLD = 30 * 1024 * 1024; // 30MB - Advertencia amarilla
+  const DANGER_THRESHOLD = 40 * 1024 * 1024;  // 40MB - Advertencia roja
+
+  // Función para calcular tamaño total de imágenes
+  const calculateTotalImageSize = () => {
+    const startTime = Date.now();
+    let totalSize = 0;
+    let count = 0;
+
+    // Logo
+    if (formData.logo) {
+      totalSize += formData.logo.size;
+      count++;
+    }
+
+    // Modelos
+    formData.modelos.forEach(modelo => {
+      [modelo.image1, modelo.image2, modelo.image3, modelo.image4].forEach(img => {
+        if (img) {
+          totalSize += img.size;
+          count++;
+        }
+      });
+    });
+
+    // Proyectos
+    formData.proyectos.forEach(proyecto => {
+      [proyecto.image1, proyecto.image2, proyecto.image3, proyecto.image4].forEach(img => {
+        if (img) {
+          totalSize += img.size;
+          count++;
+        }
+      });
+    });
+
+    // Clientes
+    formData.clientes.forEach(cliente => {
+      if (cliente.image) {
+        totalSize += cliente.image.size;
+        count++;
+      }
+    });
+
+    logger.performance('calculateTotalImageSize', startTime, {
+      totalSize,
+      count,
+      formattedSize: `${(totalSize / (1024 * 1024)).toFixed(2)}MB`
+    });
+
+    return { totalSize, count };
+  };
+
+  // Función para actualizar el tracking de tamaño
+  const updateSizeTracking = () => {
+    const { totalSize, count } = calculateTotalImageSize();
+    setTotalImageSize(totalSize);
+    setImageCount(count);
+
+    // Determinar nivel de advertencia
+    if (totalSize >= DANGER_THRESHOLD) {
+      setSizeWarningLevel('danger');
+      setShowSizeWarning(true);
+    } else if (totalSize >= WARNING_THRESHOLD) {
+      setSizeWarningLevel('warning');
+      setShowSizeWarning(true);
+    } else if (totalSize > 10 * 1024 * 1024) { // 10MB
+      setSizeWarningLevel('info');
+      setShowSizeWarning(true);
+    } else {
+      setShowSizeWarning(false);
+    }
+  };
+
+  // Función mejorada para procesar imágenes con validación de límite
+  const processImageFileWithSizeCheck = async (file: File): Promise<File> => {
+    // Validar tamaño máximo individual
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
+    }
+
+    // Validar tipo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, GIF, WebP).');
+    }
+
+    // Calcular tamaño total actual
+    const { totalSize } = calculateTotalImageSize();
+
+    // Verificar si agregar esta imagen excedería el límite
+    if (totalSize + file.size > MAX_PAYLOAD_SIZE) {
+      const remainingSpace = MAX_PAYLOAD_SIZE - totalSize;
+      const remainingMB = (remainingSpace / 1024 / 1024).toFixed(1);
+      const fileMB = (file.size / 1024 / 1024).toFixed(1);
+
+      throw new Error(
+        `⚠️ LÍMITE ALCANZADO\n\n` +
+        `Esta imagen (${fileMB}MB) excedería el límite total de 45MB.\n` +
+        `Espacio disponible: ${remainingMB}MB\n\n` +
+        `💡 ALTERNATIVAS:\n` +
+        `• Elimina algunas imágenes existentes\n` +
+        `• Usa imágenes más pequeñas (< ${remainingMB}MB)\n` +
+        `• Continúa sin esta imagen por ahora`
+      );
+    }
+
+    // Compresión inteligente basada en espacio disponible
+    let processedFile = file;
+    const remainingSpace = MAX_PAYLOAD_SIZE - totalSize;
+
+    try {
+      let quality: number;
+      let maxWidth: number;
+
+      // Compresión más agresiva si queda poco espacio
+      if (remainingSpace < 10 * 1024 * 1024) { // < 10MB disponible
+        quality = 0.4; // Ultra compresión
+        maxWidth = 1.0;
+      } else if (file.size > 2 * 1024 * 1024) { // > 2MB
+        quality = 0.6;
+        maxWidth = 1.2;
+      } else if (file.size > 1 * 1024 * 1024) { // > 1MB
+        quality = 0.7;
+        maxWidth = 1.4;
+      } else {
+        quality = 0.8;
+        maxWidth = 1.5;
+      }
+
+      processedFile = await compressImage(file, maxWidth, quality);
+      console.log(`🗜️ Imagen comprimida: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
+    } catch (error) {
+      console.error('Error al comprimir imagen:', error);
+    }
+
+    return processedFile;
+  };
+
+  // Componente de advertencia de tamaño
+  const SizeWarningBanner = () => {
+    if (!showSizeWarning) return null;
+
+    const percentage = (totalImageSize / MAX_PAYLOAD_SIZE) * 100;
+    const remainingMB = ((MAX_PAYLOAD_SIZE - totalImageSize) / 1024 / 1024).toFixed(1);
+    const totalMB = (totalImageSize / 1024 / 1024).toFixed(1);
+
+    const getWarningConfig = () => {
+      switch (sizeWarningLevel) {
+        case 'danger':
+          return {
+            bgColor: 'bg-red-900/20',
+            borderColor: 'border-red-500',
+            textColor: 'text-red-300',
+            icon: '🚨',
+            title: 'LÍMITE CRÍTICO',
+            message: `Solo quedan ${remainingMB}MB disponibles. Considera eliminar algunas imágenes.`
+          };
+        case 'warning':
+          return {
+            bgColor: 'bg-yellow-900/20',
+            borderColor: 'border-yellow-500',
+            textColor: 'text-yellow-300',
+            icon: '⚠️',
+            title: 'ACERCÁNDOSE AL LÍMITE',
+            message: `Quedan ${remainingMB}MB disponibles. Las próximas imágenes se comprimirán más.`
+          };
+        default:
+          return {
+            bgColor: 'bg-blue-900/20',
+            borderColor: 'border-blue-500',
+            textColor: 'text-blue-300',
+            icon: 'ℹ️',
+            title: 'TRACKING DE IMÁGENES',
+            message: `Espacio usado: ${totalMB}MB de 45MB disponibles.`
+          };
+      }
+    };
+
+    const config = getWarningConfig();
+
+    return (
+      <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg border-2 ${config.bgColor} ${config.borderColor} max-w-sm`}>
+        <div className="flex items-start space-x-3">
+          <span className="text-xl">{config.icon}</span>
+          <div className="flex-1">
+            <h4 className={`font-bold text-sm ${config.textColor}`}>{config.title}</h4>
+            <p className={`text-xs mt-1 ${config.textColor}`}>{config.message}</p>
+            <div className="mt-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span className={config.textColor}>{imageCount} imágenes</span>
+                <span className={config.textColor}>{percentage.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${sizeWarningLevel === 'danger' ? 'bg-red-500' :
+                      sizeWarningLevel === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                    }`}
+                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSizeWarning(false)}
+            className={`text-lg ${config.textColor} hover:opacity-70`}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Función para comprimir imágenes
   const compressImage = (file: File, maxSizeMB: number = 2, quality: number = 0.8): Promise<File> => {
     return new Promise((resolve) => {
@@ -146,7 +368,7 @@ const ContainerCompanyForm = () => {
 
   // Función genérica para procesar archivos de imagen con compresión automática
   const processImageFile = async (file: File): Promise<File> => {
-    // Validar tamaño
+    // Validar tamaño máximo antes de procesar
     if (file.size > 10 * 1024 * 1024) {
       throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
     }
@@ -159,15 +381,20 @@ const ContainerCompanyForm = () => {
 
     let processedFile = file;
 
-    // Comprimir automáticamente en móviles si el archivo es mayor a 2MB
-    if (isMobile() && file.size > 2 * 1024 * 1024) {
+    // Comprimir TODAS las imágenes automáticamente para optimizar el envío
+    // Comprimir si el archivo es mayor a 500KB (0.5MB) para asegurar tamaños manejables
+    if (file.size > 500 * 1024) {
       try {
-        processedFile = await compressImage(file, 2, 0.7);
-        console.log(`Imagen comprimida: ${file.size} bytes → ${processedFile.size} bytes`);
+        // Usar compresión más agresiva para archivos grandes
+        const quality = file.size > 2 * 1024 * 1024 ? 0.6 : 0.7;
+        processedFile = await compressImage(file, 1.5, quality);
+        console.log(`Imagen comprimida automáticamente: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
       } catch (error) {
         console.error('Error al comprimir imagen:', error);
         // Si falla la compresión, usar el archivo original
       }
+    } else {
+      console.log(`Imagen ya optimizada: ${(file.size / 1024).toFixed(2)}KB`);
     }
 
     return processedFile;
@@ -244,6 +471,11 @@ const ContainerCompanyForm = () => {
   const descStyle = { color: "#817D79" };
   const asteriskStyle = { color: "#817D79" };
 
+  // NUEVO: useEffect para actualizar el tracking al montar el componente y cuando cambian las imágenes
+  React.useEffect(() => {
+    updateSizeTracking();
+  }, [formData.logo, formData.modelos, formData.proyectos, formData.clientes]);
+
   // Funciones de manejo de formulario
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -273,18 +505,18 @@ const ContainerCompanyForm = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         setFormData((prev) => ({ ...prev, logo: processedFile }));
-        // Validar el archivo inmediatamente
         handleFieldValidation('logo', processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
         e.target.value = '';
         return;
       }
     } else {
-      // Si no hay archivo, validar como vacío
       handleFieldValidation('logo', null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -315,49 +547,57 @@ const ContainerCompanyForm = () => {
   const handleModeloImage1Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateModelo(index, "image1", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image1", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleModeloImage2Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateModelo(index, "image2", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image2", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleModeloImage3Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateModelo(index, "image3", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image3", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleModeloImage4Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateModelo(index, "image4", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image4", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -387,49 +627,57 @@ const ContainerCompanyForm = () => {
   const handleProyectoImage1Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateProyecto(index, "image1", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image1", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleProyectoImage2Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateProyecto(index, "image2", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image2", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleProyectoImage3Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateProyecto(index, "image3", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image3", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleProyectoImage4Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateProyecto(index, "image4", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image4", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -459,13 +707,15 @@ const ContainerCompanyForm = () => {
   const handleClienteImageChange = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFile(file);
+        const processedFile = await processImageFileWithSizeCheck(file);
         updateCliente(index, "image", processedFile);
+        updateSizeTracking(); // NUEVO: Actualizar tracking
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateCliente(index, "image", null);
+      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -769,7 +1019,7 @@ const ContainerCompanyForm = () => {
   // Función para obtener los campos de un paso específico
   const getFieldsForStep = (step: number): string[] => {
     const fields: string[] = [];
-    
+
     switch (step) {
       case 0:
         fields.push('companyName', 'contactPerson', 'phone', 'email', 'logo', 'brandColors');
@@ -813,7 +1063,7 @@ const ContainerCompanyForm = () => {
       default:
         break;
     }
-    
+
     return fields;
   };
 
@@ -2511,6 +2761,9 @@ const ContainerCompanyForm = () => {
             ></div>
           </div>
         </div>
+
+        {/* NUEVO: Banner de advertencia de tamaño */}
+        {showSizeWarning && <SizeWarningBanner />}
 
         <form onSubmit={handleSubmit}>
           {renderStep()}

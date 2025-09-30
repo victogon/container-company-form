@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:prod": "NODE_ENV=production playwright test",
+    "test:prod:headed": "NODE_ENV=production playwright test --headed",
+    "test:images": "playwright test tests/image-upload.spec.ts --headed",
+    "test:images:prod": "NODE_ENV=production playwright test tests/image-upload.spec.ts --headed"
   },
   "dependencies": {
     "googleapis": "^160.0.0",
@@ -18,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.48.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
