@@ -768,28 +768,53 @@ const ContainerCompanyForm = () => {
 
   // Función para obtener los campos de un paso específico
   const getFieldsForStep = (step: number): string[] => {
+    const fields: string[] = [];
+    
     switch (step) {
       case 0:
-        return ['companyName', 'contactPerson', 'phone', 'email', 'logo', 'brandColors'];
+        fields.push('companyName', 'contactPerson', 'phone', 'email', 'logo', 'brandColors');
+        break;
       case 1:
-        return ['address', 'businessHours', 'socialMedia', 'whatsappNumber'];
+        fields.push('address', 'businessHours', 'socialMedia', 'whatsappNumber', 'workAreas');
+        break;
       case 2:
-        return ['workAreas', 'foundedYear', 'teamSize', 'specialties', 'companyStory'];
+        fields.push('foundedYear', 'teamSize', 'specialties', 'companyStory', 'achievements');
+        break;
       case 3:
-        return ['achievements', 'workStyle', 'workTime', 'diferencialCompetitivo'];
-      case 4:
-        return ['ventajas', 'rangoPrecios', 'proyectosRealizados'];
-      case 5:
-        return ['dominioOption', 'dominioName'];
-      case 6:
-        return ['modelos'];
+        fields.push('workStyle', 'workTime', 'diferencialCompetitivo', 'ventajas', 'rangoPrecios', 'proyectosRealizados', 'dominioOption');
+        break;
+      case 4: // Modelos
+        fields.push('modelos');
+        // Agregar campos dinámicos de modelos
+        formData.modelos.forEach((_, index) => {
+          fields.push(`modelo_${index}_nombre`, `modelo_${index}_superficie`, `modelo_${index}_dormitorios`, `modelo_${index}_banios`);
+        });
+        break;
+      case 5: // Proyectos
+        fields.push('proyectos');
+        // Agregar campos dinámicos de proyectos
+        formData.proyectos.forEach((_, index) => {
+          fields.push(`proyecto_${index}_modelo`, `proyecto_${index}_ubicacion`, `proyecto_${index}_superficie`, `proyecto_${index}_dormitorios`, `proyecto_${index}_banios`);
+        });
+        break;
+      case 6: // Clientes
+        fields.push('clientes');
+        // Agregar campos dinámicos de clientes
+        formData.clientes.forEach((_, index) => {
+          fields.push(`cliente_${index}_nombre`, `cliente_${index}_ubicacion`, `cliente_${index}_testimonio`);
+        });
+        break;
       case 7:
-        return ['calculadoraOption', 'precioDifOpcion'];
+        fields.push('dominioOption', 'dominioName', 'calculadoraOption', 'precioDifOpcion');
+        break;
       case 8:
-        return ['frase', 'importante', 'pitch'];
+        fields.push('frase', 'importante', 'pitch');
+        break;
       default:
-        return [];
+        break;
     }
+    
+    return fields;
   };
 
   // Función para marcar un campo como tocado
@@ -802,9 +827,17 @@ const ContainerCompanyForm = () => {
   };
 
   const nextStep = () => {
-    // Validar solo los campos tocados del paso actual antes de avanzar
-    const errors = validateStepWithTouchedFields(currentStep);
+    // Validar TODOS los campos obligatorios del paso actual antes de avanzar
+    const errors = validateStep(currentStep);
     setValidationErrors(errors);
+
+    // Marcar todos los campos del paso actual como tocados para mostrar errores
+    const currentStepFields = getFieldsForStep(currentStep);
+    const newTouchedFields = { ...touchedFields };
+    currentStepFields.forEach(field => {
+      newTouchedFields[field] = true;
+    });
+    setTouchedFields(newTouchedFields);
 
     if (Object.keys(errors).length === 0) {
       // No hay errores, puede avanzar
