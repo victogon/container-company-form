@@ -94,6 +94,17 @@ export async function POST(request: NextRequest) {
         console.log('Tipo de formulario:', formType);
         
         try {
+            // Verificar configuración antes de crear el servicio
+            const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+            const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+            const apiKey = process.env.GOOGLE_API_KEY;
+            
+            if (!serviceAccountEmail && !privateKey && !apiKey) {
+                // Activar directamente el modo fallback si no hay configuración
+                console.warn('No hay configuración de Google Sheets disponible, activando modo fallback');
+                throw new Error('Google Sheets no configurado');
+            }
+            
             const sheetsService = new GoogleSheetsService(formType);
             const result = await sheetsService.processFormSubmission(data, files);
 
