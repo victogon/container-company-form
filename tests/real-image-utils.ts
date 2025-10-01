@@ -15,7 +15,7 @@ export class RealImageUtils {
     try {
       const files = fs.readdirSync(this.DOWNLOADS_PATH);
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-      
+
       this.imageCache = files
         .filter(file => {
           const ext = path.extname(file).toLowerCase();
@@ -50,7 +50,7 @@ export class RealImageUtils {
   static getImageByIndex(index: number): string | null {
     const images = this.findAvailableImages();
     if (images.length === 0) return null;
-    
+
     // Usar módulo para ciclar a través de las imágenes disponibles
     const actualIndex = index % images.length;
     return images[actualIndex];
@@ -122,7 +122,7 @@ export class RealImageUtils {
     const buffer = Buffer.alloc(sizeKB * 1024);
     // Llenar con datos simulados de imagen PNG
     buffer.write('PNG', 0);
-    
+
     return {
       name,
       mimeType: 'image/png',
@@ -134,7 +134,7 @@ export class RealImageUtils {
   static listAvailableImages(): void {
     const images = this.findAvailableImages();
     console.log(`\n📋 Imágenes disponibles en Downloads (${images.length}):`);
-    
+
     if (images.length === 0) {
       console.log('   ❌ No se encontraron imágenes');
       return;

@@ -11,10 +11,14 @@
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
-    "test:prod": "NODE_ENV=production playwright test",
-    "test:prod:headed": "NODE_ENV=production playwright test --headed",
+    "test:prod": "PLAYWRIGHT_ENV=production playwright test",
+    "test:prod:headed": "PLAYWRIGHT_ENV=production playwright test --headed --project=chromium-headed",
     "test:images": "playwright test tests/image-upload.spec.ts --headed",
-    "test:images:prod": "NODE_ENV=production playwright test tests/image-upload.spec.ts --headed"
+    "test:images:prod": "PLAYWRIGHT_ENV=production playwright test tests/image-upload.spec.ts --headed --project=chromium-headed",
+    "test:vercel": "PLAYWRIGHT_ENV=production playwright test",
+    "test:vercel:headed": "PLAYWRIGHT_ENV=production playwright test --headed --project=chromium-headed",
+    "test:form:vercel": "PLAYWRIGHT_ENV=production playwright test tests/form-submission.spec.ts",
+    "test:form:vercel:headed": "PLAYWRIGHT_ENV=production playwright test tests/form-submission.spec.ts --headed --project=chromium-headed"
   },
   "dependencies": {
     "googleapis": "^160.0.0",

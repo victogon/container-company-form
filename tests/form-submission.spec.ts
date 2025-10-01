@@ -46,7 +46,7 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         const logoInput = page.locator('#logo-upload');
         const logoImage = getTestImage('logo-empresa.jpg', 'medium', 0);
         await logoInput.setInputFiles(logoImage);
-        await page.waitForTimeout(2000); // Esperar a que se procese
+        await page.waitForTimeout(500); // Optimizado para eficiencia
 
         // 6. Colores de marca *
         await page.fill('textarea[name="brandColors"]', 'Azul corporativo, dorado y verde');
@@ -159,12 +159,12 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
             await modeloContainer.locator('input[placeholder="Ejemplo: 1"]').fill(modelo.banios);
             await modeloContainer.locator('input[placeholder="Ejemplo: USD 750 (m²)"]').fill(modelo.precio);
 
-            // Subir 3 imágenes reales para cada modelo
+            // Subir 3 imágenes reales para cada modelo (optimizado)
             for (let j = 1; j <= 3; j++) {
                 const imageInput = page.locator(`#modelo-image-${j}-${i}`);
                 const modelImage = getTestImage(`modelo-${i + 1}-imagen-${j}.jpg`, 'medium', (i * 3) + j);
                 await imageInput.setInputFiles(modelImage);
-                await page.waitForTimeout(1000); // Esperar entre imágenes
+                await page.waitForTimeout(300); // Timeout reducido para eficiencia
             }
         }
 
@@ -186,18 +186,26 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
             const proyecto = proyectos[i];
             console.log(`   🏗️ Agregando Proyecto ${i + 1}: ${proyecto.nombre} con imágenes reales`);
 
-            await page.click('button:has-text("Agregar Proyecto")');
-            await page.fill(`input[name="proyectos.${i}.nombre"]`, proyecto.nombre);
-            await page.fill(`input[name="proyectos.${i}.ubicacion"]`, proyecto.ubicacion);
-            await page.fill(`input[name="proyectos.${i}.anio"]`, proyecto.anio);
-            await page.fill(`textarea[name="proyectos.${i}.descripcion"]`, proyecto.descripcion);
+            if (i > 0) {
+                await page.click('button:has-text("Agregar proyecto")');
+                await page.waitForTimeout(500); // Esperar a que se agregue el proyecto
+            }
+
+            // Usar selectores basados en la estructura real del DOM
+            const proyectoContainer = page.locator('.p-4.rounded-lg').nth(i);
+            await proyectoContainer.locator('input[placeholder="Ejemplo: Compacta"]').fill(proyecto.nombre);
+            await proyectoContainer.locator('input[placeholder="Ejemplo: Canelones"]').fill(proyecto.ubicacion);
+            await proyectoContainer.locator('input[placeholder="Ejemplo: 2025"]').fill(proyecto.anio);
+            await proyectoContainer.locator('input[placeholder="Ejemplo: 100 (m²)"]').fill('120'); // superficie
+            await proyectoContainer.locator('input[placeholder="Ejemplo: 2"]').fill('3'); // dormitorios
+            await proyectoContainer.locator('input[placeholder="Ejemplo: 1"]').fill('2'); // banios
 
             // Subir 4 imágenes reales para cada proyecto
-            for (let j = 0; j < 4; j++) {
-                const imageInput = page.locator(`input[name="proyectos.${i}.imagenes.${j}"]`);
-                const projectImage = getTestImage(`proyecto-${i + 1}-imagen-${j + 1}.jpg`, 'large', (i * 4) + j + 18); // offset para no repetir imágenes
+            for (let j = 1; j <= 4; j++) {
+                const imageInput = page.locator(`#project-image-${j}-${i}`);
+                const projectImage = getTestImage(`proyecto-${i + 1}-imagen-${j}.jpg`, 'large', (i * 4) + j + 18); // offset para no repetir imágenes
                 await imageInput.setInputFiles(projectImage);
-                await page.waitForTimeout(1000);
+                await page.waitForTimeout(300);
             }
         }
 
@@ -218,10 +226,19 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
             const cliente = clientes[i];
             console.log(`   👤 Agregando Cliente ${i + 1}: ${cliente.nombre}`);
 
-            await page.click('button:has-text("Agregar Cliente")');
-            await page.fill(`input[name="clientes.${i}.nombre"]`, cliente.nombre);
-            await page.fill(`input[name="clientes.${i}.proyecto"]`, cliente.proyecto);
-            await page.fill(`textarea[name="clientes.${i}.testimonio"]`, cliente.testimonio);
+            if (i > 0) {
+                await page.click('button:has-text("Agregar cliente")');
+                await page.waitForTimeout(500);
+            }
+
+            // Usar selectores más específicos basados en la estructura del componente
+            const clienteContainer = page.locator('.p-4.rounded-lg').nth(i);
+            
+            await clienteContainer.locator('input[placeholder="Ejemplo: Rodrigo M."]').fill(cliente.nombre);
+            await clienteContainer.locator('input[placeholder="Ejemplo: Maldonado"]').fill(cliente.proyecto);
+            await clienteContainer.locator('textarea[placeholder*="Buscaba algo moderno"]').fill(cliente.testimonio);
+            
+            await page.waitForTimeout(500);
         }
 
         await page.click('button:has-text("Siguiente")');
@@ -296,7 +313,7 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         const logoInput = page.locator('#logo-upload');
         const logoImage = getTestImage('logo-basico.jpg', 'small', 0);
         await logoInput.setInputFiles(logoImage);
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(500);
 
         await page.fill('textarea[name="brandColors"]', 'Negro y blanco');
 

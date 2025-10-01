@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { RealImageUtils } from './real-image-utils';
 
 test.describe('Container Company Form - Validación', () => {
   test.beforeEach(async ({ page }) => {
@@ -53,6 +54,9 @@ test.describe('Container Company Form - Validación', () => {
   });
 
   test('debe permitir navegación entre pasos', async ({ page }) => {
+    // Verificar que empezamos en el paso 1
+    await expect(page.locator('text=Paso 1 de 9')).toBeVisible({ timeout: 10000 });
+    
     // Llenar campos obligatorios del primer paso
     await page.fill('input[name="companyName"]', 'Test Company');
     await page.fill('input[name="contactPerson"]', 'Juan Pérez');
@@ -60,27 +64,36 @@ test.describe('Container Company Form - Validación', () => {
     await page.fill('input[name="email"]', 'juan.perez@testcompany.com');
     await page.fill('textarea[name="brandColors"]', 'Rojo y azul');
     
-    // Subir logo (obligatorio)
-    await page.setInputFiles('#logo-upload', {
-      name: 'test-logo.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from('fake-image-data')
-    });
+    // Subir logo (obligatorio) usando imagen real
+    const testImage = RealImageUtils.getImageBySize('small', 0);
+    if (testImage) {
+      console.log(`📸 Usando imagen real para logo: ${testImage}`);
+      await page.setInputFiles('#logo-upload', testImage);
+    } else {
+      // Fallback con imagen simulada
+      console.log('⚠️ No hay imágenes reales, usando fallback');
+      await page.setInputFiles('#logo-upload', {
+        name: 'test-logo.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('fake-image-data')
+      });
+    }
     
     // Esperar a que el logo se procese
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
     
     // Avanzar al siguiente paso
     await page.click('button:has-text("Siguiente")');
     
-    // Esperar a que la navegación se complete
-    await page.waitForTimeout(1000);
-    
-    // Verificar que estamos en el paso 2 de 9
-    await expect(page.locator('text=Paso 2 de 9')).toBeVisible({ timeout: 10000 });
+    // Esperar a que la navegación se complete y verificar que estamos en el paso 2
+    await expect(page.locator('span:has-text("Paso 2 de 9")')).toBeVisible({ timeout: 15000 });
     
     // Verificar que el botón "Anterior" funciona
     await page.click('button:has-text("Anterior")');
-    await expect(page.locator('text=Paso 1 de 9')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('span:has-text("Paso 1 de 9")')).toBeVisible({ timeout: 10000 });
+    
+    // Volver al paso 2 para confirmar que la navegación funciona en ambas direcciones
+    await page.click('button:has-text("Siguiente")');
+    await expect(page.locator('span:has-text("Paso 2 de 9")')).toBeVisible({ timeout: 10000 });
   });
 });

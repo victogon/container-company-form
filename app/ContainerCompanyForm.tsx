@@ -95,8 +95,8 @@ const ContainerCompanyForm = () => {
 
   // Límites y umbrales
   const MAX_PAYLOAD_SIZE = 45 * 1024 * 1024; // 45MB (dejamos margen de 5MB)
-  const WARNING_THRESHOLD = 30 * 1024 * 1024; // 30MB - Advertencia amarilla
-  const DANGER_THRESHOLD = 40 * 1024 * 1024;  // 40MB - Advertencia roja
+  const WARNING_THRESHOLD = 15 * 1024 * 1024; // 15MB - Advertencia amarilla
+const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
 
   // Función para calcular tamaño total de imágenes
   const calculateTotalImageSize = () => {
@@ -153,19 +153,35 @@ const ContainerCompanyForm = () => {
     setTotalImageSize(totalSize);
     setImageCount(count);
 
+    // DEBUG: Logs para entender el comportamiento
+    const totalMB = (totalSize / 1024 / 1024).toFixed(2);
+    const warningMB = (WARNING_THRESHOLD / 1024 / 1024).toFixed(2);
+    const dangerMB = (DANGER_THRESHOLD / 1024 / 1024).toFixed(2);
+    
+    console.log(`🔍 SIZE TRACKING DEBUG:`);
+    console.log(`  Total size: ${totalMB}MB (${count} images)`);
+    console.log(`  Warning threshold: ${warningMB}MB`);
+    console.log(`  Danger threshold: ${dangerMB}MB`);
+
     // Determinar nivel de advertencia
     if (totalSize >= DANGER_THRESHOLD) {
+      console.log(`🚨 ACTIVATING DANGER WARNING (${totalMB}MB >= ${dangerMB}MB)`);
       setSizeWarningLevel('danger');
       setShowSizeWarning(true);
     } else if (totalSize >= WARNING_THRESHOLD) {
+      console.log(`⚠️ ACTIVATING WARNING (${totalMB}MB >= ${warningMB}MB)`);
       setSizeWarningLevel('warning');
       setShowSizeWarning(true);
     } else if (totalSize > 10 * 1024 * 1024) { // 10MB
+      console.log(`ℹ️ ACTIVATING INFO (${totalMB}MB > 10MB)`);
       setSizeWarningLevel('info');
       setShowSizeWarning(true);
     } else {
+      console.log(`✅ NO WARNING NEEDED (${totalMB}MB <= 10MB)`);
       setShowSizeWarning(false);
     }
+    
+    console.log(`  showSizeWarning will be: ${totalSize > 10 * 1024 * 1024}`);
   };
 
   // Función mejorada para procesar imágenes con validación de límite
@@ -235,7 +251,12 @@ const ContainerCompanyForm = () => {
 
   // Componente de advertencia de tamaño
   const SizeWarningBanner = () => {
-    if (!showSizeWarning) return null;
+    console.log(`🎯 SizeWarningBanner render - showSizeWarning: ${showSizeWarning}`);
+    if (!showSizeWarning) {
+      console.log('❌ Banner NOT rendering - showSizeWarning is false');
+      return null;
+    }
+    console.log('✅ Banner WILL render - showSizeWarning is true');
 
     const percentage = (totalImageSize / MAX_PAYLOAD_SIZE) * 100;
     const remainingMB = ((MAX_PAYLOAD_SIZE - totalImageSize) / 1024 / 1024).toFixed(1);
@@ -473,6 +494,11 @@ const ContainerCompanyForm = () => {
 
   // NUEVO: useEffect para actualizar el tracking al montar el componente y cuando cambian las imágenes
   React.useEffect(() => {
+    console.log('🔄 useEffect triggered - updating size tracking');
+    console.log('  Logo:', formData.logo ? `${formData.logo.name} (${(formData.logo.size / 1024 / 1024).toFixed(2)}MB)` : 'none');
+    console.log('  Modelos:', formData.modelos.length);
+    console.log('  Proyectos:', formData.proyectos.length);
+    console.log('  Clientes:', formData.clientes.length);
     updateSizeTracking();
   }, [formData.logo, formData.modelos, formData.proyectos, formData.clientes]);
 
@@ -1232,11 +1258,8 @@ const ContainerCompanyForm = () => {
         if (cliente.image) formDataToSend.append(`cliente_${index}_image1`, cliente.image);
       });
 
-      // Usar endpoint de prueba si estamos en modo testing
-      const endpoint = process.env.NODE_ENV === 'test' || 
-                      (typeof window !== 'undefined' && window.location.search.includes('test=true'))
-                      ? "/api/test-form" 
-                      : "/api/submit-form";
+      // Usar siempre el endpoint principal para consistencia
+      const endpoint = "/api/submit-form";
       
       console.log(`Enviando a endpoint: ${endpoint}`);
       
