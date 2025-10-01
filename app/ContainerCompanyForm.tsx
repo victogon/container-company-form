@@ -1232,8 +1232,15 @@ const ContainerCompanyForm = () => {
         if (cliente.image) formDataToSend.append(`cliente_${index}_image1`, cliente.image);
       });
 
-      // Usando endpoint principal con modo de fallback
-      const response = await fetch("/api/submit-form", {
+      // Usar endpoint de prueba si estamos en modo testing
+      const endpoint = process.env.NODE_ENV === 'test' || 
+                      (typeof window !== 'undefined' && window.location.search.includes('test=true'))
+                      ? "/api/test-form" 
+                      : "/api/submit-form";
+      
+      console.log(`Enviando a endpoint: ${endpoint}`);
+      
+      const response = await fetch(endpoint, {
         method: "POST",
         body: formDataToSend,
       });

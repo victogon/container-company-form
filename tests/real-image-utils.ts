@@ -40,6 +40,12 @@ export class RealImageUtils {
     }
   }
 
+  // Obtener el total de imágenes disponibles
+  static getTotalImageCount(): number {
+    const images = this.findAvailableImages();
+    return images.length;
+  }
+
   // Obtener una imagen específica por índice
   static getImageByIndex(index: number): string | null {
     const images = this.findAvailableImages();
@@ -50,44 +56,43 @@ export class RealImageUtils {
     return images[actualIndex];
   }
 
-  // Obtener imagen por tamaño aproximado (pequeña, mediana, grande)
+  // Obtener imagen por tamaño preferido
   static getImageBySize(preferredSize: 'small' | 'medium' | 'large', fallbackIndex: number = 0): string | null {
     const images = this.findAvailableImages();
     if (images.length === 0) return null;
 
-    try {
-      const imagesWithSizes = images.map(imagePath => {
+    // Clasificar imágenes por tamaño
+    const imagesBySize = images.map(imagePath => {
+      try {
         const stats = fs.statSync(imagePath);
         return { path: imagePath, size: stats.size };
-      });
-
-      let filteredImages: typeof imagesWithSizes = [];
-
-      switch (preferredSize) {
-        case 'small':
-          // Menos de 1MB
-          filteredImages = imagesWithSizes.filter(img => img.size < 1024 * 1024);
-          break;
-        case 'medium':
-          // Entre 1MB y 5MB
-          filteredImages = imagesWithSizes.filter(img => img.size >= 1024 * 1024 && img.size < 5 * 1024 * 1024);
-          break;
-        case 'large':
-          // Más de 5MB
-          filteredImages = imagesWithSizes.filter(img => img.size >= 5 * 1024 * 1024);
-          break;
+      } catch {
+        return null;
       }
+    }).filter(Boolean) as { path: string; size: number }[];
 
-      if (filteredImages.length > 0) {
-        const randomIndex = fallbackIndex % filteredImages.length;
-        return filteredImages[randomIndex].path;
-      }
+    // Ordenar por tamaño
+    imagesBySize.sort((a, b) => a.size - b.size);
 
-      // Si no hay imágenes del tamaño preferido, usar cualquiera
-      return this.getImageByIndex(fallbackIndex);
-    } catch {
-      return this.getImageByIndex(fallbackIndex);
+    const totalImages = imagesBySize.length;
+    if (totalImages === 0) return null;
+
+    let targetIndex: number;
+    switch (preferredSize) {
+      case 'small':
+        targetIndex = Math.floor(totalImages * 0.2); // 20% más pequeñas
+        break;
+      case 'medium':
+        targetIndex = Math.floor(totalImages * 0.5); // 50% medianas
+        break;
+      case 'large':
+        targetIndex = Math.floor(totalImages * 0.8); // 80% más grandes
+        break;
+      default:
+        targetIndex = fallbackIndex % totalImages;
     }
+
+    return imagesBySize[targetIndex]?.path || imagesBySize[fallbackIndex % totalImages]?.path || null;
   }
 
   // Obtener información de una imagen
@@ -95,54 +100,53 @@ export class RealImageUtils {
     try {
       const stats = fs.statSync(imagePath);
       const name = path.basename(imagePath);
-      const size = stats.size;
-      const sizeFormatted = this.formatFileSize(size);
-      
-      return { name, size, sizeFormatted };
+      return {
+        name,
+        size: stats.size,
+        sizeFormatted: this.formatFileSize(stats.size)
+      };
     } catch {
       return null;
     }
   }
 
-  // Formatear tamaño de archivo
   private static formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    if (bytes === 0) return '0 Bytes';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   }
 
-  // Crear fallback si no hay imágenes reales
+  // Crear imagen simulada como fallback
   static createFallbackImage(name: string, sizeKB: number = 500): { name: string; mimeType: string; buffer: Buffer } {
-    const jpegHeader = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0]);
-    const jpegFooter = Buffer.from([0xFF, 0xD9]);
-    const imageData = Buffer.alloc(sizeKB * 1024 - jpegHeader.length - jpegFooter.length, 0x80);
+    const buffer = Buffer.alloc(sizeKB * 1024);
+    // Llenar con datos simulados de imagen PNG
+    buffer.write('PNG', 0);
     
     return {
       name,
-      mimeType: 'image/jpeg',
-      buffer: Buffer.concat([jpegHeader, imageData, jpegFooter])
+      mimeType: 'image/png',
+      buffer
     };
   }
 
-  // Listar todas las imágenes disponibles con información
+  // Listar todas las imágenes disponibles
   static listAvailableImages(): void {
     const images = this.findAvailableImages();
-    console.log('\n📸 IMÁGENES DISPONIBLES EN DESCARGAS:');
-    console.log('=====================================');
+    console.log(`\n📋 Imágenes disponibles en Downloads (${images.length}):`);
     
     if (images.length === 0) {
-      console.log('❌ No se encontraron imágenes en la carpeta de Descargas');
+      console.log('   ❌ No se encontraron imágenes');
       return;
     }
 
-    images.forEach((imagePath, index) => {
+    images.slice(0, 10).forEach((imagePath, index) => {
       const info = this.getImageInfo(imagePath);
-      if (info) {
-        console.log(`${index + 1}. ${info.name} (${info.sizeFormatted})`);
-      }
+      console.log(`   ${index + 1}. ${info?.name} (${info?.sizeFormatted})`);
     });
-    console.log('=====================================\n');
+
+    if (images.length > 10) {
+      console.log(`   ... y ${images.length - 10} más`);
+    }
   }
 }

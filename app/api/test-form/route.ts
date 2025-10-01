@@ -85,26 +85,15 @@ export async function POST(request: NextRequest) {
 
         return Response.json({
             success: true,
-            message: `Formulario ${formType} procesado exitosamente (MODO PRUEBA)`,
+            message: `Formulario de prueba procesado exitosamente para ${data.companyName}`,
             data: {
-                formType: formType,
                 companyName: data.companyName,
-                contactPerson: data.contactPerson,
-                email: data.email,
-                phone: data.phone,
-                filesReceived: Object.keys(files).length,
-                fieldsProcessed: Object.keys(data).length,
+                sheetName: 'Hoja de Prueba',
+                filesUploaded: Object.keys(files).length,
+                formType: formType,
                 timestamp: new Date().toISOString(),
-                mode: 'TEST'
-            },
-            debug: {
-                parsedArrays: jsonFields.reduce((acc, field) => {
-                    if (parsedData[field] && Array.isArray(parsedData[field])) {
-                        acc[field] = parsedData[field].length;
-                    }
-                    return acc;
-                }, {} as Record<string, number>),
-                files: files
+                fieldsReceived: Object.keys(data).length,
+                filesReceived: Object.keys(files).length
             }
         });
 
