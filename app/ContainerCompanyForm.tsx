@@ -90,9 +90,7 @@ const ContainerCompanyForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = 9;
 
-  // Estado para tracking de uploads de Cloudinary
-  const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+
 
   const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
     const uploadFormData = new FormData();
@@ -133,54 +131,10 @@ const ContainerCompanyForm = () => {
       throw new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, GIF, WebP).');
     }
 
-    // Marcar como subiendo
-    setUploadingImages(prev => new Set([...prev, imageKey]));
-    setUploadProgress(prev => ({ ...prev, [imageKey]: 0 }));
-
     try {
-      // Simular progreso (Cloudinary no proporciona progreso real en el cliente)
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => ({
-          ...prev,
-          [imageKey]: Math.min((prev[imageKey] || 0) + 10, 90)
-        }));
-      }, 200);
-
       const imageUrl = await uploadToCloudinary(file, folder);
-
-      // Completar progreso
-      clearInterval(progressInterval);
-      setUploadProgress(prev => ({ ...prev, [imageKey]: 100 }));
-
-      // Limpiar estado después de un momento
-      setTimeout(() => {
-        setUploadingImages(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(imageKey);
-          return newSet;
-        });
-        setUploadProgress(prev => {
-          const newProgress = { ...prev };
-          delete newProgress[imageKey];
-          return newProgress;
-        });
-      }, 1000);
-
       return imageUrl;
-
     } catch (error) {
-      // Limpiar estado en caso de error
-      setUploadingImages(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(imageKey);
-        return newSet;
-      });
-      setUploadProgress(prev => {
-        const newProgress = { ...prev };
-        delete newProgress[imageKey];
-        return newProgress;
-      });
-
       throw error;
     }
   };
