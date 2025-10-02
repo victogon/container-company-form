@@ -119,7 +119,7 @@ const ContainerCompanyForm = () => {
 
 
   // Función mejorada para procesar imágenes con validación de límite
-  const uploadImageToCloudinary = async (file: File, folder: string, imageKey: string): Promise<string> => {
+  const uploadImageToCloudinary = async (file: File, folder: string): Promise<string> => {
     // Validar tamaño máximo individual (10MB)
     if (file.size > 10 * 1024 * 1024) {
       throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
@@ -258,7 +258,7 @@ const ContainerCompanyForm = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const imageUrl = await uploadImageToCloudinary(file, 'logos', 'logo');
+        const imageUrl = await uploadImageToCloudinary(file, 'logos');
         setFormData((prev) => ({ ...prev, logo: imageUrl }));
         handleFieldValidation('logo', imageUrl);
       } catch (error) {
@@ -299,8 +299,7 @@ const ContainerCompanyForm = () => {
   const handleModeloImage1Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `modelo_${index}_image1`;
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
         updateModelo(index, "image1", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -312,8 +311,7 @@ const ContainerCompanyForm = () => {
   const handleModeloImage2Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `modelo_${index}_image2`;
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
         updateModelo(index, "image2", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -325,8 +323,7 @@ const ContainerCompanyForm = () => {
   const handleModeloImage3Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `modelo_${index}_image3`;
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
         updateModelo(index, "image3", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -338,8 +335,7 @@ const ContainerCompanyForm = () => {
   const handleModeloImage4Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `modelo_${index}_image4`;
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
         updateModelo(index, "image4", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -375,8 +371,7 @@ const ContainerCompanyForm = () => {
   const handleProyectoImage1Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `proyecto_${index}_image1`;
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
         updateProyecto(index, "image1", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -388,8 +383,7 @@ const ContainerCompanyForm = () => {
   const handleProyectoImage2Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `proyecto-${index}-image2`;
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
         updateProyecto(index, "image2", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -401,8 +395,7 @@ const ContainerCompanyForm = () => {
   const handleProyectoImage3Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `proyecto-${index}-image3`;
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
         updateProyecto(index, "image3", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -414,8 +407,7 @@ const ContainerCompanyForm = () => {
   const handleProyectoImage4Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `proyecto-${index}-image4`;
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
         updateProyecto(index, "image4", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
@@ -451,8 +443,7 @@ const ContainerCompanyForm = () => {
   const handleClienteImageChange = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageKey = `cliente_${index}_image`;
-        const imageUrl = await uploadImageToCloudinary(file, 'clientes', imageKey);
+        const imageUrl = await uploadImageToCloudinary(file, 'clientes');
         updateCliente(index, "image", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
