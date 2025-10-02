@@ -260,7 +260,19 @@ const ContainerCompanyForm = () => {
       try {
         const imageUrl = await uploadImageToCloudinary(file, 'logos');
         setFormData((prev) => ({ ...prev, logo: imageUrl }));
-        handleFieldValidation('logo', imageUrl);
+        
+        // Marcar el campo como tocado y luego validar
+        setTouchedFields(prev => ({
+          ...prev,
+          logo: true
+        }));
+        
+        // Limpiar el error del logo inmediatamente
+        setValidationErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.logo;
+          return newErrors;
+        });
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
         e.target.value = '';
