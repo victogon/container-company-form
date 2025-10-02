@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
 import ConfirmationScreen from './components/ConfirmationScreen';
-import { logger } from '../utils/logger';
+
 
 // Define interfaces for form data structure
 interface Modelo {
@@ -187,23 +187,7 @@ const ContainerCompanyForm = () => {
 
 
 
-  // Componente para mostrar progreso de subida
-  const UploadProgress = ({ imageKey }: { imageKey: string }) => {
-    const isUploading = uploadingImages.has(imageKey);
-    const progress = uploadProgress[imageKey] || 0;
 
-    if (!isUploading) return null;
-
-    return (
-      <div className="mt-2 bg-gray-700 rounded-full h-2">
-        <div 
-          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${progress}%` }}
-        />
-        <p className="text-xs text-gray-400 mt-1">Subiendo... {progress}%</p>
-      </div>
-    );
-  };
 
   // Función auxiliar para obtener el nombre del archivo de manera segura
   const getFileName = (file: File | string | null): string => {
@@ -212,58 +196,7 @@ const ContainerCompanyForm = () => {
     return file.name;
   };
 
-  // Función para comprimir imágenes
-  const compressImage = (file: File, quality: number = 0.8): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
 
-      img.onload = () => {
-        // Calcular nuevas dimensiones manteniendo la proporción
-        const maxWidth = 1200;
-        const maxHeight = 1200;
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // Dibujar imagen redimensionada
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        // Convertir a blob con compresión
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              resolve(file);
-            }
-          },
-          'image/jpeg',
-          quality
-        );
-      };
-
-      img.src = URL.createObjectURL(file);
-    });
-  };
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
