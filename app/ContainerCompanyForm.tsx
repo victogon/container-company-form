@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
 import ConfirmationScreen from './components/ConfirmationScreen';
 import { logger } from '../utils/logger';
@@ -13,10 +13,10 @@ interface Modelo {
   banios: string;
   preciobase: string;
   especiales: string;
-  image1: File | null;
-  image2: File | null;
-  image3: File | null;
-  image4: File | null;
+  image1: File | string | null;
+  image2: File | string | null;
+  image3: File | string | null;
+  image4: File | string | null;
 }
 
 interface Proyecto {
@@ -26,17 +26,17 @@ interface Proyecto {
   superficie: string;
   dormitorios: string;
   banios: string;
-  image1: File | null;
-  image2: File | null;
-  image3: File | null;
-  image4: File | null;
+  image1: File | string | null;
+  image2: File | string | null;
+  image3: File | string | null;
+  image4: File | string | null;
 }
 
 interface Cliente {
   nombre: string;
   ubicacion: string;
   testimonio: string;
-  image: File | null;
+  image: File | string | null;
 }
 
 interface FormData {
@@ -44,7 +44,7 @@ interface FormData {
   contactPerson: string;
   phone: string;
   email: string;
-  logo: File | null;
+  logo: File | string | null;
   brandColors: string;
   address: string;
   businessHours: string;
@@ -83,110 +83,46 @@ interface FormData {
 interface ValidationErrors {
   [key: string]: string;
 }
+
+// Límites y umbrales eliminados
+
 const ContainerCompanyForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = 9;
 
-  // Estado para tracking de tamaño total
-  const [totalImageSize, setTotalImageSize] = useState(0);
-  const [imageCount, setImageCount] = useState(0);
-  const [showSizeWarning, setShowSizeWarning] = useState(false);
-  const [sizeWarningLevel, setSizeWarningLevel] = useState<'info' | 'warning' | 'danger'>('info');
+  // Estado para tracking de uploads de Cloudinary
+  const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
-  // Límites y umbrales
-  const MAX_PAYLOAD_SIZE = 45 * 1024 * 1024; // 45MB (dejamos margen de 5MB)
-  const WARNING_THRESHOLD = 15 * 1024 * 1024; // 15MB - Advertencia amarilla
-const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
+  const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+    uploadFormData.append('folder', folder);
+    uploadFormData.append('companyName', formData.companyName || 'unknown');
 
-  // Función para calcular tamaño total de imágenes
-  const calculateTotalImageSize = () => {
-    const startTime = Date.now();
-    let totalSize = 0;
-    let count = 0;
+    const response = await fetch('/api/upload-image', {
+      method: 'POST',
+      body: uploadFormData,
+    });
 
-    // Logo
-    if (formData.logo) {
-      totalSize += formData.logo.size;
-      count++;
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error subiendo imagen');
     }
 
-    // Modelos
-    formData.modelos.forEach(modelo => {
-      [modelo.image1, modelo.image2, modelo.image3, modelo.image4].forEach(img => {
-        if (img) {
-          totalSize += img.size;
-          count++;
-        }
-      });
-    });
-
-    // Proyectos
-    formData.proyectos.forEach(proyecto => {
-      [proyecto.image1, proyecto.image2, proyecto.image3, proyecto.image4].forEach(img => {
-        if (img) {
-          totalSize += img.size;
-          count++;
-        }
-      });
-    });
-
-    // Clientes
-    formData.clientes.forEach(cliente => {
-      if (cliente.image) {
-        totalSize += cliente.image.size;
-        count++;
-      }
-    });
-
-    logger.performance('calculateTotalImageSize', startTime, {
-      totalSize,
-      count,
-      formattedSize: `${(totalSize / (1024 * 1024)).toFixed(2)}MB`
-    });
-
-    return { totalSize, count };
+    const result = await response.json();
+    return result.url;
   };
 
-  // Función para actualizar el tracking de tamaño
-  const updateSizeTracking = () => {
-    const { totalSize, count } = calculateTotalImageSize();
-    setTotalImageSize(totalSize);
-    setImageCount(count);
 
-    // DEBUG: Logs para entender el comportamiento
-    const totalMB = (totalSize / 1024 / 1024).toFixed(2);
-    const warningMB = (WARNING_THRESHOLD / 1024 / 1024).toFixed(2);
-    const dangerMB = (DANGER_THRESHOLD / 1024 / 1024).toFixed(2);
-    
-    console.log(`🔍 SIZE TRACKING DEBUG:`);
-    console.log(`  Total size: ${totalMB}MB (${count} images)`);
-    console.log(`  Warning threshold: ${warningMB}MB`);
-    console.log(`  Danger threshold: ${dangerMB}MB`);
 
-    // Determinar nivel de advertencia
-    if (totalSize >= DANGER_THRESHOLD) {
-      console.log(`🚨 ACTIVATING DANGER WARNING (${totalMB}MB >= ${dangerMB}MB)`);
-      setSizeWarningLevel('danger');
-      setShowSizeWarning(true);
-    } else if (totalSize >= WARNING_THRESHOLD) {
-      console.log(`⚠️ ACTIVATING WARNING (${totalMB}MB >= ${warningMB}MB)`);
-      setSizeWarningLevel('warning');
-      setShowSizeWarning(true);
-    } else if (totalSize > 10 * 1024 * 1024) { // 10MB
-      console.log(`ℹ️ ACTIVATING INFO (${totalMB}MB > 10MB)`);
-      setSizeWarningLevel('info');
-      setShowSizeWarning(true);
-    } else {
-      console.log(`✅ NO WARNING NEEDED (${totalMB}MB <= 10MB)`);
-      setShowSizeWarning(false);
-    }
-    
-    console.log(`  showSizeWarning will be: ${totalSize > 10 * 1024 * 1024}`);
-  };
+
+
+
 
   // Función mejorada para procesar imágenes con validación de límite
-  const processImageFileWithSizeCheck = async (file: File): Promise<File> => {
-    // Validar tamaño máximo individual
+  const uploadImageToCloudinary = async (file: File, folder: string, imageKey: string): Promise<string> => {
+    // Validar tamaño máximo individual (10MB)
     if (file.size > 10 * 1024 * 1024) {
       throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
     }
@@ -197,140 +133,87 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
       throw new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, GIF, WebP).');
     }
 
-    // Calcular tamaño total actual
-    const { totalSize } = calculateTotalImageSize();
-
-    // Verificar si agregar esta imagen excedería el límite
-    if (totalSize + file.size > MAX_PAYLOAD_SIZE) {
-      const remainingSpace = MAX_PAYLOAD_SIZE - totalSize;
-      const remainingMB = (remainingSpace / 1024 / 1024).toFixed(1);
-      const fileMB = (file.size / 1024 / 1024).toFixed(1);
-
-      throw new Error(
-        `⚠️ LÍMITE ALCANZADO\n\n` +
-        `Esta imagen (${fileMB}MB) excedería el límite total de 45MB.\n` +
-        `Espacio disponible: ${remainingMB}MB\n\n` +
-        `💡 ALTERNATIVAS:\n` +
-        `• Elimina algunas imágenes existentes\n` +
-        `• Usa imágenes más pequeñas (< ${remainingMB}MB)\n` +
-        `• Continúa sin esta imagen por ahora`
-      );
-    }
-
-    // Compresión inteligente basada en espacio disponible
-    let processedFile = file;
-    const remainingSpace = MAX_PAYLOAD_SIZE - totalSize;
+    // Marcar como subiendo
+    setUploadingImages(prev => new Set([...prev, imageKey]));
+    setUploadProgress(prev => ({ ...prev, [imageKey]: 0 }));
 
     try {
-      let quality: number;
-      let maxWidth: number;
+      // Simular progreso (Cloudinary no proporciona progreso real en el cliente)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          [imageKey]: Math.min((prev[imageKey] || 0) + 10, 90)
+        }));
+      }, 200);
 
-      // Compresión más agresiva si queda poco espacio
-      if (remainingSpace < 10 * 1024 * 1024) { // < 10MB disponible
-        quality = 0.4; // Ultra compresión
-        maxWidth = 1.0;
-      } else if (file.size > 2 * 1024 * 1024) { // > 2MB
-        quality = 0.6;
-        maxWidth = 1.2;
-      } else if (file.size > 1 * 1024 * 1024) { // > 1MB
-        quality = 0.7;
-        maxWidth = 1.4;
-      } else {
-        quality = 0.8;
-        maxWidth = 1.5;
-      }
+      const imageUrl = await uploadToCloudinary(file, folder);
 
-      processedFile = await compressImage(file, maxWidth, quality);
-      console.log(`🗜️ Imagen comprimida: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
+      // Completar progreso
+      clearInterval(progressInterval);
+      setUploadProgress(prev => ({ ...prev, [imageKey]: 100 }));
+
+      // Limpiar estado después de un momento
+      setTimeout(() => {
+        setUploadingImages(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(imageKey);
+          return newSet;
+        });
+        setUploadProgress(prev => {
+          const newProgress = { ...prev };
+          delete newProgress[imageKey];
+          return newProgress;
+        });
+      }, 1000);
+
+      return imageUrl;
+
     } catch (error) {
-      console.error('Error al comprimir imagen:', error);
-    }
+      // Limpiar estado en caso de error
+      setUploadingImages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(imageKey);
+        return newSet;
+      });
+      setUploadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[imageKey];
+        return newProgress;
+      });
 
-    return processedFile;
+      throw error;
+    }
   };
 
-  // Componente de advertencia de tamaño
-  const SizeWarningBanner = () => {
-    console.log(`🎯 SizeWarningBanner render - showSizeWarning: ${showSizeWarning}`);
-    if (!showSizeWarning) {
-      console.log('❌ Banner NOT rendering - showSizeWarning is false');
-      return null;
-    }
-    console.log('✅ Banner WILL render - showSizeWarning is true');
 
-    const percentage = (totalImageSize / MAX_PAYLOAD_SIZE) * 100;
-    const remainingMB = ((MAX_PAYLOAD_SIZE - totalImageSize) / 1024 / 1024).toFixed(1);
-    const totalMB = (totalImageSize / 1024 / 1024).toFixed(1);
 
-    const getWarningConfig = () => {
-      switch (sizeWarningLevel) {
-        case 'danger':
-          return {
-            bgColor: 'bg-red-900/20',
-            borderColor: 'border-red-500',
-            textColor: 'text-red-300',
-            icon: '🚨',
-            title: 'LÍMITE CRÍTICO',
-            message: `Solo quedan ${remainingMB}MB disponibles. Considera eliminar algunas imágenes.`
-          };
-        case 'warning':
-          return {
-            bgColor: 'bg-yellow-900/20',
-            borderColor: 'border-yellow-500',
-            textColor: 'text-yellow-300',
-            icon: '⚠️',
-            title: 'ACERCÁNDOSE AL LÍMITE',
-            message: `Quedan ${remainingMB}MB disponibles. Las próximas imágenes se comprimirán más.`
-          };
-        default:
-          return {
-            bgColor: 'bg-blue-900/20',
-            borderColor: 'border-blue-500',
-            textColor: 'text-blue-300',
-            icon: 'ℹ️',
-            title: 'TRACKING DE IMÁGENES',
-            message: `Espacio usado: ${totalMB}MB de 45MB disponibles.`
-          };
-      }
-    };
+  // Componente para mostrar progreso de subida
+  const UploadProgress = ({ imageKey }: { imageKey: string }) => {
+    const isUploading = uploadingImages.has(imageKey);
+    const progress = uploadProgress[imageKey] || 0;
 
-    const config = getWarningConfig();
+    if (!isUploading) return null;
 
     return (
-      <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg border-2 ${config.bgColor} ${config.borderColor} max-w-sm`}>
-        <div className="flex items-start space-x-3">
-          <span className="text-xl">{config.icon}</span>
-          <div className="flex-1">
-            <h4 className={`font-bold text-sm ${config.textColor}`}>{config.title}</h4>
-            <p className={`text-xs mt-1 ${config.textColor}`}>{config.message}</p>
-            <div className="mt-2">
-              <div className="flex justify-between text-xs mb-1">
-                <span className={config.textColor}>{imageCount} imágenes</span>
-                <span className={config.textColor}>{percentage.toFixed(1)}%</span>
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all duration-300 ${sizeWarningLevel === 'danger' ? 'bg-red-500' :
-                      sizeWarningLevel === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-                    }`}
-                  style={{ width: `${Math.min(percentage, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowSizeWarning(false)}
-            className={`text-lg ${config.textColor} hover:opacity-70`}
-          >
-            ×
-          </button>
-        </div>
+      <div className="mt-2 bg-gray-700 rounded-full h-2">
+        <div 
+          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+        <p className="text-xs text-gray-400 mt-1">Subiendo... {progress}%</p>
       </div>
     );
   };
 
+  // Función auxiliar para obtener el nombre del archivo de manera segura
+  const getFileName = (file: File | string | null): string => {
+    if (!file) return 'Subir imagen';
+    if (typeof file === 'string') return file;
+    return file.name;
+  };
+
   // Función para comprimir imágenes
-  const compressImage = (file: File, maxSizeMB: number = 2, quality: number = 0.8): Promise<File> => {
+  const compressImage = (file: File, quality: number = 0.8): Promise<File> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -382,45 +265,6 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
     });
   };
 
-  // Detectar si es dispositivo móvil
-  const isMobile = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  };
-
-  // Función genérica para procesar archivos de imagen con compresión automática
-  const processImageFile = async (file: File): Promise<File> => {
-    // Validar tamaño máximo antes de procesar
-    if (file.size > 10 * 1024 * 1024) {
-      throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
-    }
-
-    // Validar tipo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, GIF, WebP).');
-    }
-
-    let processedFile = file;
-
-    // Comprimir TODAS las imágenes automáticamente para optimizar el envío
-    // Comprimir si el archivo es mayor a 500KB (0.5MB) para asegurar tamaños manejables
-    if (file.size > 500 * 1024) {
-      try {
-        // Usar compresión más agresiva para archivos grandes
-        const quality = file.size > 2 * 1024 * 1024 ? 0.6 : 0.7;
-        processedFile = await compressImage(file, 1.5, quality);
-        console.log(`Imagen comprimida automáticamente: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
-      } catch (error) {
-        console.error('Error al comprimir imagen:', error);
-        // Si falla la compresión, usar el archivo original
-      }
-    } else {
-      console.log(`Imagen ya optimizada: ${(file.size / 1024).toFixed(2)}KB`);
-    }
-
-    return processedFile;
-  };
-
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -469,6 +313,10 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
     clientes: [{ nombre: '', ubicacion: '', testimonio: '', image: null }]
   });
 
+  // Función para calcular tamaño total de imágenes eliminada
+
+  // Función para actualizar el tracking de tamaño eliminada
+
   const steps = [
     { title: "Datos de la empresa" },
     { title: "Ubicación y contacto" },
@@ -492,15 +340,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
   const descStyle = { color: "#817D79" };
   const asteriskStyle = { color: "#817D79" };
 
-  // NUEVO: useEffect para actualizar el tracking al montar el componente y cuando cambian las imágenes
-  React.useEffect(() => {
-    console.log('🔄 useEffect triggered - updating size tracking');
-    console.log('  Logo:', formData.logo ? `${formData.logo.name} (${(formData.logo.size / 1024 / 1024).toFixed(2)}MB)` : 'none');
-    console.log('  Modelos:', formData.modelos.length);
-    console.log('  Proyectos:', formData.proyectos.length);
-    console.log('  Clientes:', formData.clientes.length);
-    updateSizeTracking();
-  }, [formData.logo, formData.modelos, formData.proyectos, formData.clientes]);
+
 
   // Funciones de manejo de formulario
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -531,18 +371,17 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        setFormData((prev) => ({ ...prev, logo: processedFile }));
-        handleFieldValidation('logo', processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageUrl = await uploadImageToCloudinary(file, 'logos', 'logo');
+        setFormData((prev) => ({ ...prev, logo: imageUrl }));
+        handleFieldValidation('logo', imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
         e.target.value = '';
         return;
       }
     } else {
+      setFormData((prev) => ({ ...prev, logo: null }));
       handleFieldValidation('logo', null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -573,57 +412,53 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
   const handleModeloImage1Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateModelo(index, "image1", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `modelo_${index}_image1`;
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        updateModelo(index, "image1", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image1", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleModeloImage2Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateModelo(index, "image2", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `modelo_${index}_image2`;
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        updateModelo(index, "image2", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image2", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleModeloImage3Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateModelo(index, "image3", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `modelo_${index}_image3`;
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        updateModelo(index, "image3", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image3", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleModeloImage4Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateModelo(index, "image4", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `modelo_${index}_image4`;
+        const imageUrl = await uploadImageToCloudinary(file, 'modelos', imageKey);
+        updateModelo(index, "image4", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateModelo(index, "image4", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -653,57 +488,53 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
   const handleProyectoImage1Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateProyecto(index, "image1", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `proyecto_${index}_image1`;
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        updateProyecto(index, "image1", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image1", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleProyectoImage2Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateProyecto(index, "image2", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `proyecto-${index}-image2`;
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        updateProyecto(index, "image2", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image2", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleProyectoImage3Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateProyecto(index, "image3", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `proyecto-${index}-image3`;
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        updateProyecto(index, "image3", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image3", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
   const handleProyectoImage4Change = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateProyecto(index, "image4", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `proyecto-${index}-image4`;
+        const imageUrl = await uploadImageToCloudinary(file, 'proyectos', imageKey);
+        updateProyecto(index, "image4", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateProyecto(index, "image4", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -733,15 +564,14 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
   const handleClienteImageChange = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const processedFile = await processImageFileWithSizeCheck(file);
-        updateCliente(index, "image", processedFile);
-        updateSizeTracking(); // NUEVO: Actualizar tracking
+        const imageKey = `cliente_${index}_image`;
+        const imageUrl = await uploadImageToCloudinary(file, 'clientes', imageKey);
+        updateCliente(index, "image", imageUrl);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateCliente(index, "image", null);
-      updateSizeTracking(); // NUEVO: Actualizar tracking
     }
   };
 
@@ -1026,22 +856,6 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
       return newErrors;
     });
   };
-
-  // Función para validar solo campos tocados en un paso específico
-  const validateStepWithTouchedFields = (step: number): ValidationErrors => {
-    const allErrors = validateStep(step);
-    const touchedErrors: ValidationErrors = {};
-
-    // Solo incluir errores de campos que han sido tocados
-    Object.keys(allErrors).forEach(fieldKey => {
-      if (touchedFields[fieldKey]) {
-        touchedErrors[fieldKey] = allErrors[fieldKey];
-      }
-    });
-
-    return touchedErrors;
-  };
-
   // Función para obtener los campos de un paso específico
   const getFieldsForStep = (step: number): string[] => {
     const fields: string[] = [];
@@ -1225,63 +1039,54 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
       formDataToSend.append('frase', formData.frase || '');
       formDataToSend.append('pitch', formData.pitch || '');
       formDataToSend.append('importante', formData.importante || '');
-      // ... resto de tus campos básicos
 
-      // Arrays como JSON
-      formDataToSend.append('specialties', JSON.stringify(formData.specialties));
-      formDataToSend.append('diferencialCompetitivo', JSON.stringify(formData.diferencialCompetitivo));
-      formDataToSend.append('modelos', JSON.stringify(formData.modelos));
-      formDataToSend.append('proyectos', JSON.stringify(formData.proyectos));
-      formDataToSend.append('clientes', JSON.stringify(formData.clientes));
-
-      // Archivos (mantén tu lógica actual)
-      if (formData.logo) {
-        formDataToSend.append('logo', formData.logo);
+      // Logo como URL (no como archivo)
+      if (formData.logo && typeof formData.logo === 'string') {
+        formDataToSend.append('logoUrl', formData.logo);
       }
 
-      // Archivos de modelos, proyectos, clientes (mantén tu lógica actual)
-      formData.modelos.forEach((modelo, index) => {
-        if (modelo.image1) formDataToSend.append(`modelo_${index}_image1`, modelo.image1);
-        if (modelo.image2) formDataToSend.append(`modelo_${index}_image2`, modelo.image2);
-        if (modelo.image3) formDataToSend.append(`modelo_${index}_image3`, modelo.image3);
-        if (modelo.image4) formDataToSend.append(`modelo_${index}_image4`, modelo.image4);
-      });
+      // Convertir modelos, proyectos y clientes a formato con URLs
+      const modelosWithUrls = formData.modelos.map(modelo => ({
+        ...modelo,
+        image1: typeof modelo.image1 === 'string' ? modelo.image1 : null,
+        image2: typeof modelo.image2 === 'string' ? modelo.image2 : null,
+        image3: typeof modelo.image3 === 'string' ? modelo.image3 : null,
+        image4: typeof modelo.image4 === 'string' ? modelo.image4 : null,
+      }));
 
-      formData.proyectos.forEach((project, index) => {
-        if (project.image1) formDataToSend.append(`proyecto_${index}_image1`, project.image1);
-        if (project.image2) formDataToSend.append(`proyecto_${index}_image2`, project.image2);
-        if (project.image3) formDataToSend.append(`proyecto_${index}_image3`, project.image3);
-        if (project.image4) formDataToSend.append(`proyecto_${index}_image4`, project.image4);
-      });
+      const proyectosWithUrls = formData.proyectos.map(proyecto => ({
+        ...proyecto,
+        image1: typeof proyecto.image1 === 'string' ? proyecto.image1 : null,
+        image2: typeof proyecto.image2 === 'string' ? proyecto.image2 : null,
+        image3: typeof proyecto.image3 === 'string' ? proyecto.image3 : null,
+        image4: typeof proyecto.image4 === 'string' ? proyecto.image4 : null,
+      }));
 
-      formData.clientes.forEach((cliente, index) => {
-        if (cliente.image) formDataToSend.append(`cliente_${index}_image1`, cliente.image);
-      });
+      const clientesWithUrls = formData.clientes.map(cliente => ({
+        ...cliente,
+        image: typeof cliente.image === 'string' ? cliente.image : null,
+      }));
 
-      // Usar siempre el endpoint principal para consistencia
-      const endpoint = "/api/submit-form";
-      
-      console.log(`Enviando a endpoint: ${endpoint}`);
-      
-      const response = await fetch(endpoint, {
+      // Arrays como JSON (ahora con URLs)
+      formDataToSend.append('specialties', JSON.stringify(formData.specialties));
+      formDataToSend.append('diferencialCompetitivo', JSON.stringify(formData.diferencialCompetitivo));
+      formDataToSend.append('modelos', JSON.stringify(modelosWithUrls));
+      formDataToSend.append('proyectos', JSON.stringify(proyectosWithUrls));
+      formDataToSend.append('clientes', JSON.stringify(clientesWithUrls));
+
+      const response = await fetch("/api/submit-form", {
         method: "POST",
         body: formDataToSend,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-
-        // Manejo específico para error 413 (Payload Too Large)
-        if (response.status === 413) {
-          throw new Error('Los archivos son demasiado grandes. Por favor, reduce el tamaño de las imágenes e intenta nuevamente.');
-        }
-
         throw new Error(`Error ${response.status}: ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
 
-      // Mostrar pantalla de confirmación personalizada
+      // Mostrar pantalla de confirmación
       setConfirmationData({
         companyName: formData.companyName,
         sheetName: result.data.sheetName,
@@ -1301,56 +1106,8 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
   };
 
   // Funciones para manejar la pantalla de confirmación
-  const handleCloseConfirmation = () => {
-    setShowConfirmation(false);
-    setConfirmationData(null);
-  };
 
-  const handleNewForm = () => {
-    // Resetear el formulario a su estado inicial
-    setCurrentStep(0);
-    setValidationErrors({});
-    setShowConfirmation(false);
-    setConfirmationData(null);
-    setFormData({
-      companyName: '',
-      contactPerson: '',
-      phone: '',
-      email: '',
-      logo: null,
-      brandColors: '',
-      address: '',
-      businessHours: '',
-      socialMedia: '',
-      whatsappNumber: '',
-      workAreas: '',
-      foundedYear: '',
-      teamSize: '',
-      specialties: [],
-      companyStory: '',
-      achievements: '',
-      workStyle: '',
-      workTime: '',
-      diferencialCompetitivo: [],
-      ventajas: '',
-      rangoPrecios: '',
-      proyectosRealizados: '',
-      dominioOption: '',
-      dominioName: '',
-      calculadoraOption: '',
-      rangoMetros: '',
-      precioCategoria: '',
-      precioDifOpcion: '',
-      precioDifValor: '',
-      frase: '',
-      importante: '',
-      pitch: '',
-      formType: 'container',
-      modelos: [{ nombre: '', categoria: '', superficie: '', dormitorios: '', banios: '', preciobase: '', especiales: '', image1: null, image2: null, image3: null, image4: null }],
-      proyectos: [{ modelo: '', ubicacion: '', anio: '', superficie: '', dormitorios: '', banios: '', image1: null, image2: null, image3: null, image4: null }],
-      clientes: [{ nombre: '', ubicacion: '', testimonio: '', image: null }]
-    });
-  };
+
 
   // Componente para mostrar errores
   const ErrorMessage = ({ error }: { error: string | null | undefined }) => {
@@ -1464,7 +1221,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                 </label>
                 {formData.logo && (
                   <div className="mt-2 text-sm" style={labelStyle}>
-                    Archivo: {formData.logo instanceof File ? formData.logo.name : String(formData.logo)}
+                    Archivo: {getFileName(formData.logo)}
                   </div>
                 )}
               </div>
@@ -1665,7 +1422,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                       name="specialties"
                       value={option.specialties}
                       checked={formData.specialties.includes(option.specialties)}
-                      onChange={(_e) => handleCheckboxChange("specialties", option.specialties)}
+                      onChange={() => handleCheckboxChange("specialties", option.specialties)}
                       className={`w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300 rounded ${validationErrors.specialties ? 'border-red-400' : ''}`}
                       style={{
                         borderColor: "#F0EFED",
@@ -1838,7 +1595,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                       name="diferencialCompetitivo"
                       value={option.diferencialCompetitivo}
                       checked={formData.diferencialCompetitivo.includes(option.diferencialCompetitivo)}
-                      onChange={(_e) => handleCheckboxChange("diferencialCompetitivo", option.diferencialCompetitivo)}
+                      onChange={() => handleCheckboxChange("diferencialCompetitivo", option.diferencialCompetitivo)}
                       className={`w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300 rounded ${validationErrors.diferencialCompetitivo ? 'border-red-400' : ''}`}
                       style={{
                         borderColor: validationErrors.diferencialCompetitivo ? "#f87171" : "#F0EFED",
@@ -2149,7 +1906,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {modelo.image1 && modelo.image1.name ? modelo.image1.name : 'Subir imagen'}
+                              {getFileName(modelo.image1)}
                             </div>
                           </label>
                         </div>
@@ -2171,8 +1928,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {modelo.image2 && modelo.image2.name ? modelo.image2.name : 'Subir imagen'}
-
+                              {getFileName(modelo.image2)}
                             </div>
                           </label>
                         </div>
@@ -2194,7 +1950,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {modelo.image3 && modelo.image3.name ? modelo.image3.name : 'Subir imagen'}
+                              {getFileName(modelo.image3)}
                             </div>
                           </label>
                         </div>
@@ -2216,7 +1972,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {modelo.image4 && modelo.image4.name ? modelo.image4.name : 'Subir imagen'}
+                              {getFileName(modelo.image4)}
                             </div>
                           </label>
                         </div>
@@ -2369,7 +2125,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {project.image1 && project.image1.name ? project.image1.name : 'Subir imagen'}
+                              {getFileName(project.image1)}
                             </div>
                           </label>
                         </div>
@@ -2391,7 +2147,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {project.image2 && project.image2.name ? project.image2.name : 'Subir imagen'}
+                              {getFileName(project.image2)}
                             </div>
                           </label>
                         </div>
@@ -2413,7 +2169,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {project.image3 && project.image3.name ? project.image3.name : 'Subir imagen'}
+                              {getFileName(project.image3)}
                             </div>
                           </label>
                         </div>
@@ -2435,7 +2191,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {project.image4 && project.image4.name ? project.image4.name : 'Subir imagen'}
+                              {getFileName(project.image4)}
                             </div>
                           </label>
                         </div>
@@ -2554,7 +2310,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
                               className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
                             />
                             <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {cliente.image && cliente.image.name ? cliente.image.name : 'Subir imagen'}
+                              {getFileName(cliente.image)}
                             </div>
                           </label>
                         </div>
@@ -2792,8 +2548,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
           </div>
         </div>
 
-        {/* NUEVO: Banner de advertencia de tamaño */}
-        {showSizeWarning && <SizeWarningBanner />}
+
 
         <form onSubmit={handleSubmit}>
           {renderStep()}
@@ -2871,10 +2626,7 @@ const DANGER_THRESHOLD = 25 * 1024 * 1024;  // 25MB - Advertencia roja
       {showConfirmation && confirmationData && (
         <ConfirmationScreen
           companyName={confirmationData.companyName}
-          sheetName={confirmationData.sheetName}
           filesUploaded={confirmationData.filesUploaded}
-          onClose={handleCloseConfirmation}
-          onNewForm={handleNewForm}
         />
       )}
     </div>

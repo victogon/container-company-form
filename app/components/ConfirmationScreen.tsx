@@ -4,18 +4,12 @@ import { Check, Upload, Home } from 'lucide-react';
 
 interface ConfirmationScreenProps {
   companyName: string;
-  sheetName: string;
   filesUploaded: number;
-  onClose: () => void;
-  onNewForm: () => void;
 }
 
 const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   companyName,
-  sheetName,
   filesUploaded,
-  onClose,
-  onNewForm,
 }) => {
 
   // Bloquear scroll del body cuando se muestra la confirmación

@@ -23,6 +23,7 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
     };
 
     test('debe enviar formulario completo con imágenes reales', async ({ page }) => {
+        test.setTimeout(120000); // Aumentar timeout a 2 minutos
         await page.goto('/?test=true');
 
         console.log('🚀 Iniciando test completo con imágenes reales del Downloads...');
@@ -129,16 +130,20 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         await expect(page.locator('text=Paso 5 de 9')).toBeVisible({ timeout: 10000 });
 
         // ==================== PASO 5: MODELOS CON IMÁGENES REALES ====================
-        console.log('🏠 Completando Paso 5: 6 Modelos con imágenes reales');
+        console.log('🏠 Completando Paso 5: 10 Modelos con 4 imágenes cada uno');
 
-        // 25. Modelos
+        // 25. Modelos - 10 modelos con variedad
         const modelos = [
             { nombre: 'Estudio Compacto Urban', categoria: 'Habitacional', superficie: '25', dormitorios: '1', banios: '1', precio: '45000' },
             { nombre: 'Casa Familiar Premium', categoria: 'Habitacional', superficie: '80', dormitorios: '3', banios: '2', precio: '95000' },
             { nombre: 'Oficina Comercial Executive', categoria: 'Comercial', superficie: '60', dormitorios: '0', banios: '2', precio: '75000' },
             { nombre: 'Loft Industrial Moderno', categoria: 'Habitacional', superficie: '120', dormitorios: '2', banios: '2', precio: '135000' },
             { nombre: 'Centro Comercial Modular', categoria: 'Comercial', superficie: '200', dormitorios: '0', banios: '4', precio: '180000' },
-            { nombre: 'Villa Sustentable Eco', categoria: 'Habitacional', superficie: '150', dormitorios: '4', banios: '3', precio: '165000' }
+            { nombre: 'Villa Sustentable Eco', categoria: 'Habitacional', superficie: '150', dormitorios: '4', banios: '3', precio: '165000' },
+            { nombre: 'Duplex Contemporáneo', categoria: 'Habitacional', superficie: '180', dormitorios: '3', banios: '3', precio: '195000' },
+            { nombre: 'Oficina Startup Hub', categoria: 'Comercial', superficie: '40', dormitorios: '0', banios: '1', precio: '55000' },
+            { nombre: 'Casa de Campo Rústica', categoria: 'Habitacional', superficie: '220', dormitorios: '5', banios: '4', precio: '285000' },
+            { nombre: 'Showroom Comercial', categoria: 'Comercial', superficie: '300', dormitorios: '0', banios: '3', precio: '320000' }
         ];
 
         for (let i = 0; i < modelos.length; i++) {
@@ -147,11 +152,21 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
 
             if (i > 0) {
                 await page.click('button:has-text("Agregar modelo")');
-                await page.waitForTimeout(500); // Esperar a que se agregue el modelo
+                // Esperar a que el nuevo modelo se agregue al DOM
+                await page.waitForFunction(
+                    (expectedCount) => document.querySelectorAll('.p-4.rounded-lg').length >= expectedCount,
+                    i + 1,
+                    { timeout: 5000 }
+                );
+                await page.waitForTimeout(500); // Tiempo para estabilizar el DOM
             }
 
             // Usar selectores basados en la estructura real del DOM
             const modeloContainer = page.locator('.p-4.rounded-lg').nth(i);
+
+            // Esperar a que el contenedor esté visible antes de interactuar
+            await modeloContainer.waitFor({ state: 'visible', timeout: 5000 });
+
             await modeloContainer.locator('input[placeholder="Ejemplo: Compacta"]').fill(modelo.nombre);
             await modeloContainer.locator('input[placeholder="Ejemplo: Básico"]').fill(modelo.categoria);
             await modeloContainer.locator('input[placeholder="Ejemplo: 50 (m²)"]').fill(modelo.superficie);
@@ -159,12 +174,14 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
             await modeloContainer.locator('input[placeholder="Ejemplo: 1"]').fill(modelo.banios);
             await modeloContainer.locator('input[placeholder="Ejemplo: USD 750 (m²)"]').fill(modelo.precio);
 
-            // Subir 3 imágenes reales para cada modelo (optimizado)
-            for (let j = 1; j <= 3; j++) {
+            // Subir 4 imágenes reales para cada modelo
+            for (let j = 1; j <= 4; j++) {
                 const imageInput = page.locator(`#modelo-image-${j}-${i}`);
-                const modelImage = getTestImage(`modelo-${i + 1}-imagen-${j}.jpg`, 'medium', (i * 3) + j);
+                // Esperar a que el input de imagen esté disponible con timeout reducido
+                await imageInput.waitFor({ state: 'attached', timeout: 3000 });
+                const modelImage = getTestImage(`modelo-${i + 1}-imagen-${j}.jpg`, 'medium', (i * 4) + j);
                 await imageInput.setInputFiles(modelImage);
-                await page.waitForTimeout(300); // Timeout reducido para eficiencia
+                await page.waitForTimeout(200); // Tiempo reducido para procesar la imagen
             }
         }
 
@@ -172,14 +189,30 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         await expect(page.locator('text=Paso 6 de 9')).toBeVisible({ timeout: 15000 });
 
         // ==================== PASO 6: PROYECTOS CON IMÁGENES REALES ====================
-        console.log('🏗️ Completando Paso 6: 4 Proyectos con imágenes reales');
+        console.log('🏗️ Completando Paso 6: 20 Proyectos con 4 imágenes cada uno');
 
-        // 26. Proyectos
+        // 26. Proyectos - 20 proyectos diversos
         const proyectos = [
-            { nombre: 'Casa Sustentable Nordelta', ubicacion: 'Nordelta, Buenos Aires', anio: '2023', descripcion: 'Casa familiar de 120m² con paneles solares y sistema de recolección de agua de lluvia.' },
-            { nombre: 'Oficinas Corporativas Puerto Madero', ubicacion: 'Puerto Madero, CABA', anio: '2022', descripcion: 'Complejo de oficinas modulares de 300m² con diseño minimalista y tecnología inteligente.' },
-            { nombre: 'Complejo Habitacional Pilar', ubicacion: 'Pilar, Buenos Aires', anio: '2023', descripcion: 'Desarrollo de 8 unidades habitacionales con espacios comunitarios y áreas verdes.' },
-            { nombre: 'Centro Comercial Rosario', ubicacion: 'Rosario, Santa Fe', anio: '2022', descripcion: 'Centro comercial modular de 500m² con locales gastronómicos y tiendas especializadas.' }
+            { nombre: 'Casa Sustentable Nordelta', ubicacion: 'Nordelta, Buenos Aires', anio: '2023', superficie: '120', dormitorios: '3', banios: '2' },
+            { nombre: 'Oficinas Corporativas Puerto Madero', ubicacion: 'Puerto Madero, CABA', anio: '2022', superficie: '300', dormitorios: '0', banios: '4' },
+            { nombre: 'Complejo Habitacional Pilar', ubicacion: 'Pilar, Buenos Aires', anio: '2023', superficie: '180', dormitorios: '4', banios: '3' },
+            { nombre: 'Centro Comercial Rosario', ubicacion: 'Rosario, Santa Fe', anio: '2022', superficie: '500', dormitorios: '0', banios: '6' },
+            { nombre: 'Villa Moderna Tigre', ubicacion: 'Tigre, Buenos Aires', anio: '2023', superficie: '250', dormitorios: '5', banios: '4' },
+            { nombre: 'Oficina Tech Palermo', ubicacion: 'Palermo, CABA', anio: '2023', superficie: '150', dormitorios: '0', banios: '2' },
+            { nombre: 'Casa Minimalista La Plata', ubicacion: 'La Plata, Buenos Aires', anio: '2022', superficie: '90', dormitorios: '2', banios: '2' },
+            { nombre: 'Complejo Turístico Bariloche', ubicacion: 'Bariloche, Río Negro', anio: '2023', superficie: '400', dormitorios: '8', banios: '6' },
+            { nombre: 'Estudio Artístico Recoleta', ubicacion: 'Recoleta, CABA', anio: '2022', superficie: '80', dormitorios: '1', banios: '1' },
+            { nombre: 'Casa Familiar Córdoba', ubicacion: 'Córdoba Capital', anio: '2023', superficie: '160', dormitorios: '4', banios: '3' },
+            { nombre: 'Oficina Coworking Belgrano', ubicacion: 'Belgrano, CABA', anio: '2022', superficie: '200', dormitorios: '0', banios: '3' },
+            { nombre: 'Villa Ecológica Mendoza', ubicacion: 'Mendoza Capital', anio: '2023', superficie: '280', dormitorios: '6', banios: '5' },
+            { nombre: 'Loft Industrial San Telmo', ubicacion: 'San Telmo, CABA', anio: '2022', superficie: '110', dormitorios: '2', banios: '2' },
+            { nombre: 'Casa de Playa Mar del Plata', ubicacion: 'Mar del Plata, Buenos Aires', anio: '2023', superficie: '140', dormitorios: '3', banios: '2' },
+            { nombre: 'Centro Médico Microcentro', ubicacion: 'Microcentro, CABA', anio: '2022', superficie: '350', dormitorios: '0', banios: '8' },
+            { nombre: 'Casa Contemporánea Salta', ubicacion: 'Salta Capital', anio: '2023', superficie: '190', dormitorios: '4', banios: '3' },
+            { nombre: 'Oficina Startup Villa Crespo', ubicacion: 'Villa Crespo, CABA', anio: '2022', superficie: '120', dormitorios: '0', banios: '2' },
+            { nombre: 'Complejo Residencial Tucumán', ubicacion: 'San Miguel de Tucumán', anio: '2023', superficie: '320', dormitorios: '12', banios: '8' },
+            { nombre: 'Casa Inteligente Neuquén', ubicacion: 'Neuquén Capital', anio: '2022', superficie: '170', dormitorios: '3', banios: '3' },
+            { nombre: 'Showroom Comercial Rosario', ubicacion: 'Rosario Centro, Santa Fe', anio: '2023', superficie: '450', dormitorios: '0', banios: '5' }
         ];
 
         for (let i = 0; i < proyectos.length; i++) {
@@ -188,24 +221,32 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
 
             if (i > 0) {
                 await page.click('button:has-text("Agregar proyecto")');
-                await page.waitForTimeout(500); // Esperar a que se agregue el proyecto
+                // Esperar a que el nuevo proyecto se agregue al DOM con timeout reducido
+                await page.waitForSelector(`.p-4.rounded-lg:nth-child(${i + 1})`, { timeout: 3000 });
+                await page.waitForTimeout(200); // Tiempo reducido para estabilizar el DOM
             }
 
             // Usar selectores basados en la estructura real del DOM
             const proyectoContainer = page.locator('.p-4.rounded-lg').nth(i);
+
+            // Esperar a que el contenedor esté visible antes de interactuar con timeout reducido
+            await proyectoContainer.waitFor({ state: 'visible', timeout: 3000 });
+
             await proyectoContainer.locator('input[placeholder="Ejemplo: Compacta"]').fill(proyecto.nombre);
             await proyectoContainer.locator('input[placeholder="Ejemplo: Canelones"]').fill(proyecto.ubicacion);
             await proyectoContainer.locator('input[placeholder="Ejemplo: 2025"]').fill(proyecto.anio);
-            await proyectoContainer.locator('input[placeholder="Ejemplo: 100 (m²)"]').fill('120'); // superficie
-            await proyectoContainer.locator('input[placeholder="Ejemplo: 2"]').fill('3'); // dormitorios
-            await proyectoContainer.locator('input[placeholder="Ejemplo: 1"]').fill('2'); // banios
+            await proyectoContainer.locator('input[placeholder="Ejemplo: 100 (m²)"]').fill(proyecto.superficie);
+            await proyectoContainer.locator('input[placeholder="Ejemplo: 2"]').fill(proyecto.dormitorios);
+            await proyectoContainer.locator('input[placeholder="Ejemplo: 1"]').fill(proyecto.banios);
 
             // Subir 4 imágenes reales para cada proyecto
             for (let j = 1; j <= 4; j++) {
                 const imageInput = page.locator(`#project-image-${j}-${i}`);
+                // Esperar a que el input de imagen esté disponible con timeout reducido
+                await imageInput.waitFor({ state: 'attached', timeout: 3000 });
                 const projectImage = getTestImage(`proyecto-${i + 1}-imagen-${j}.jpg`, 'large', (i * 4) + j + 18); // offset para no repetir imágenes
                 await imageInput.setInputFiles(projectImage);
-                await page.waitForTimeout(300);
+                await page.waitForTimeout(200); // Tiempo reducido para procesar la imagen
             }
         }
 
@@ -213,13 +254,16 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         await expect(page.locator('text=Paso 7 de 9')).toBeVisible({ timeout: 15000 });
 
         // ==================== PASO 7: CLIENTES ====================
-        console.log('👥 Completando Paso 7: Clientes');
+        console.log('👥 Completando Paso 7: 6 Clientes con imágenes');
 
-        // 27. Clientes
+        // 27. Clientes - 6 clientes diversos
         const clientes = [
             { nombre: 'Familia Rodriguez', proyecto: 'Casa Sustentable Nordelta', testimonio: 'Excelente trabajo, superó nuestras expectativas. La casa es hermosa y muy eficiente energéticamente.' },
             { nombre: 'Empresa TechSolutions', proyecto: 'Oficinas Corporativas Puerto Madero', testimonio: 'Profesionalismo excepcional. Las oficinas quedaron perfectas para nuestro equipo de trabajo.' },
-            { nombre: 'Desarrolladora Inmobiliaria Sur', proyecto: 'Complejo Habitacional Pilar', testimonio: 'Cumplieron con todos los plazos y la calidad es superior. Definitivamente volveremos a trabajar juntos.' }
+            { nombre: 'Desarrolladora Inmobiliaria Sur', proyecto: 'Complejo Habitacional Pilar', testimonio: 'Cumplieron con todos los plazos y la calidad es superior. Definitivamente volveremos a trabajar juntos.' },
+            { nombre: 'Familia Martinez', proyecto: 'Villa Moderna Tigre', testimonio: 'Increíble atención al detalle. Nuestra villa quedó exactamente como la soñamos, moderna y funcional.' },
+            { nombre: 'Startup InnovateLab', proyecto: 'Oficina Tech Palermo', testimonio: 'Entendieron perfectamente nuestras necesidades como startup. El espacio es inspirador y productivo.' },
+            { nombre: 'Pareja Fernandez-Lopez', proyecto: 'Casa Minimalista La Plata', testimonio: 'Diseño minimalista perfecto. Cada metro cuadrado está optimizado y el resultado es espectacular.' }
         ];
 
         for (let i = 0; i < clientes.length; i++) {
@@ -228,17 +272,30 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
 
             if (i > 0) {
                 await page.click('button:has-text("Agregar cliente")');
-                await page.waitForTimeout(500);
+                // Esperar a que el nuevo cliente se agregue al DOM con timeout reducido
+                await page.waitForSelector(`.p-4.rounded-lg:nth-child(${i + 1})`, { timeout: 3000 });
+                await page.waitForTimeout(200); // Tiempo reducido para estabilizar el DOM
             }
 
             // Usar selectores más específicos basados en la estructura del componente
             const clienteContainer = page.locator('.p-4.rounded-lg').nth(i);
-            
+
+            // Esperar a que el contenedor esté visible antes de interactuar con timeout reducido
+            await clienteContainer.waitFor({ state: 'visible', timeout: 3000 });
+
             await clienteContainer.locator('input[placeholder="Ejemplo: Rodrigo M."]').fill(cliente.nombre);
             await clienteContainer.locator('input[placeholder="Ejemplo: Maldonado"]').fill(cliente.proyecto);
             await clienteContainer.locator('textarea[placeholder*="Buscaba algo moderno"]').fill(cliente.testimonio);
-            
-            await page.waitForTimeout(500);
+
+            // Subir imagen del cliente
+            const clientImageInput = page.locator(`#cliente-image-${i}`);
+            // Esperar a que el input de imagen esté disponible con timeout reducido
+            await clientImageInput.waitFor({ state: 'attached', timeout: 3000 });
+            const clientImage = getTestImage(`cliente-${i + 1}.jpg`, 'medium', i + 100); // offset para no repetir imágenes
+            await clientImageInput.setInputFiles(clientImage);
+            await page.waitForTimeout(200); // Tiempo reducido para procesar la imagen
+
+            await page.waitForTimeout(200);
         }
 
         await page.click('button:has-text("Siguiente")');
@@ -288,12 +345,35 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         // ==================== ENVÍO DEL FORMULARIO ====================
         console.log('📤 Enviando formulario completo...');
 
+        // Configurar listener para alertas y errores
+        let alertMessage = '';
+        page.on('dialog', async dialog => {
+            alertMessage = dialog.message();
+            console.log('🚨 Alerta detectada:', alertMessage);
+            await dialog.accept();
+        });
+
+        // Configurar listener para errores de consola
+        page.on('console', msg => {
+            if (msg.type() === 'error') {
+                console.log('❌ Error de consola:', msg.text());
+            }
+        });
+
         await page.click('button[type="submit"]:has-text("Enviar")');
 
-        // Verificar que aparece la pantalla de confirmación
-        await expect(page.locator('text=¡Formulario enviado!')).toBeVisible({ timeout: 30000 });
+        // Esperar un poco para ver si aparece alguna alerta
+        await page.waitForTimeout(2000);
 
-        console.log('✅ Formulario completo enviado exitosamente con imágenes reales del Downloads!');
+        // Si hay una alerta, reportarla
+        if (alertMessage) {
+            console.log('🚨 Se detectó una alerta durante el envío:', alertMessage);
+        }
+
+        // Verificar que aparece la pantalla de confirmación con timeout extendido
+        await expect(page.locator('text=¡Formulario enviado!')).toBeVisible({ timeout: 120000 });
+
+        console.log('✅ Formulario con solo campos obligatorios enviado exitosamente!');
     });
 
     test('debe completar solo los campos obligatorios', async ({ page }) => {

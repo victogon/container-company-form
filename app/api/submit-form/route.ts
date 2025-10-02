@@ -97,7 +97,6 @@ export async function POST(request: NextRequest) {
             // Verificar configuración antes de crear el servicio
             const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
             const privateKey = process.env.GOOGLE_PRIVATE_KEY;
-            const apiKey = process.env.GOOGLE_API_KEY;
             
             // Verificación más estricta para activar fallback en producción
             if (!serviceAccountEmail || !privateKey) {

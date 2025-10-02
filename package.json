@@ -21,6 +21,7 @@
     "test:form:vercel:headed": "PLAYWRIGHT_ENV=production playwright test tests/form-submission.spec.ts --headed --project=chromium-headed"
   },
   "dependencies": {
+    "cloudinary": "^2.7.0",
     "googleapis": "^160.0.0",
     "lucide-react": "^0.544.0",
     "multer": "^2.0.2",

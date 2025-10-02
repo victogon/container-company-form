@@ -34,9 +34,9 @@ export const getSheetConfig = (formType: string): SheetConfig => {
 export const FILE_CONFIGS: { [key: string]: FileConfig } = {
     containers: {
         folderPrefix: 'containers',
-        maxModelos: 10,
-        maxProyectos: 10,
-        maxClientes: 10
+        maxModelos: 100,
+        maxProyectos: 100,
+        maxClientes: 100
     }
     // restaurantes: {
     //     folderPrefix: 'restaurantes',
