@@ -90,7 +90,9 @@ const ContainerCompanyForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = 9;
 
-
+  // Estado para tracking de uploads de Cloudinary
+  const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
   const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
     const uploadFormData = new FormData();
