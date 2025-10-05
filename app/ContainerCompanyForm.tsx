@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
+import Image from 'next/image';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Upload, X } from 'lucide-react';
 import ConfirmationScreen from './components/ConfirmationScreen';
-
 
 // Define interfaces for form data structure
 interface Modelo {
@@ -13,10 +13,7 @@ interface Modelo {
   banios: string;
   preciobase: string;
   especiales: string;
-  image1: File | string | null;
-  image2: File | string | null;
-  image3: File | string | null;
-  image4: File | string | null;
+  images: { url: string; publicId: string }[];
 }
 
 interface Proyecto {
@@ -26,17 +23,14 @@ interface Proyecto {
   superficie: string;
   dormitorios: string;
   banios: string;
-  image1: File | string | null;
-  image2: File | string | null;
-  image3: File | string | null;
-  image4: File | string | null;
+  images: { url: string; publicId: string }[];
 }
 
 interface Cliente {
   nombre: string;
   ubicacion: string;
   testimonio: string;
-  image: File | string | null;
+  image: { url: string; publicId: string } | null;
 }
 
 interface FormData {
@@ -44,7 +38,7 @@ interface FormData {
   contactPerson: string;
   phone: string;
   email: string;
-  logo: File | string | null;
+  logo: { url: string; publicId: string } | null;
   brandColors: string;
   address: string;
   businessHours: string;
@@ -92,7 +86,7 @@ const ContainerCompanyForm = () => {
 
 
 
-  const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
+  const uploadToCloudinary = async (file: File, folder: string): Promise<{ url: string; publicId: string }> => {
     const uploadFormData = new FormData();
     uploadFormData.append('file', file);
     uploadFormData.append('folder', folder);
@@ -109,7 +103,7 @@ const ContainerCompanyForm = () => {
     }
 
     const result = await response.json();
-    return result.url;
+    return { url: result.url, publicId: result.publicId };
   };
 
 
@@ -119,7 +113,7 @@ const ContainerCompanyForm = () => {
 
 
   // Función mejorada para procesar imágenes con validación de límite
-  const uploadImageToCloudinary = async (file: File, folder: string): Promise<string> => {
+  const uploadImageToCloudinary = async (file: File, folder: string): Promise<{ url: string; publicId: string }> => {
     // Validar tamaño máximo individual (10MB)
     if (file.size > 10 * 1024 * 1024) {
       throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
@@ -132,25 +126,27 @@ const ContainerCompanyForm = () => {
     }
 
     try {
-      const imageUrl = await uploadToCloudinary(file, folder);
-      return imageUrl;
+      const image = await uploadToCloudinary(file, folder);
+      return image;
     } catch (error) {
       throw error;
     }
   };
 
-
-
-
-
   // Función auxiliar para obtener el nombre del archivo de manera segura
-  const getFileName = (file: File | string | null): string => {
+  const getFileName = (file: File | string | { url: string; publicId: string } | null): string => {
     if (!file) return 'Subir imagen';
     if (typeof file === 'string') return file;
-    return file.name;
+    if (file && typeof file === 'object' && 'url' in file) {
+      try {
+        const u = new URL(file.url);
+        return u.pathname.split('/').pop() || file.url;
+      } catch {
+        return file.url;
+      }
+    }
+    return (file as File).name;
   };
-
-
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
@@ -195,8 +191,8 @@ const ContainerCompanyForm = () => {
     pitch: '',
     formType: 'container',
     // Nuevos campos para tablas
-    modelos: [{ nombre: '', categoria: '', superficie: '', dormitorios: '', banios: '', preciobase: '', especiales: '', image1: null, image2: null, image3: null, image4: null }],
-    proyectos: [{ modelo: '', ubicacion: '', anio: '', superficie: '', dormitorios: '', banios: '', image1: null, image2: null, image3: null, image4: null }],
+    modelos: [{ nombre: '', categoria: '', superficie: '', dormitorios: '', banios: '', preciobase: '', especiales: '', images: [] }],
+    proyectos: [{ modelo: '', ubicacion: '', anio: '', superficie: '', dormitorios: '', banios: '', images: [] as { url: string; publicId: string }[] }],
     clientes: [{ nombre: '', ubicacion: '', testimonio: '', image: null }]
   });
 
@@ -258,15 +254,15 @@ const ContainerCompanyForm = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const imageUrl = await uploadImageToCloudinary(file, 'logos');
-        setFormData((prev) => ({ ...prev, logo: imageUrl }));
-        
+        const image = await uploadImageToCloudinary(file, 'logos');
+        setFormData((prev) => ({ ...prev, logo: image }));
+
         // Marcar el campo como tocado y luego validar
         setTouchedFields(prev => ({
           ...prev,
           logo: true
         }));
-        
+
         // Limpiar el error del logo inmediatamente
         setValidationErrors(prev => {
           const newErrors = { ...prev };
@@ -284,11 +280,23 @@ const ContainerCompanyForm = () => {
     }
   };
 
+  const handleRemoveLogoImage = async () => {
+    if (!formData.logo) return;
+    try {
+      const fd = new FormData();
+      fd.append('publicId', formData.logo.publicId);
+      await fetch('/api/upload-image', { method: 'DELETE', body: fd });
+    } catch (err) {
+      // Silently ignore deletion errors, still clear from form
+    }
+    setFormData((prev) => ({ ...prev, logo: null }));
+  };
+
   // Funciones para tablas dinámicas
   const addModeloRow = () => {
     setFormData((prev) => ({
       ...prev,
-      modelos: [...prev.modelos, { nombre: "", categoria: "", superficie: "", dormitorios: "", banios: "", preciobase: "", especiales: "", image1: null, image2: null, image3: null, image4: null }],
+      modelos: [...prev.modelos, { nombre: "", categoria: "", superficie: "", dormitorios: "", banios: "", preciobase: "", especiales: "", images: [] }],
     }));
   };
 
@@ -308,59 +316,53 @@ const ContainerCompanyForm = () => {
     }));
   };
 
-  const handleModeloImage1Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
-        updateModelo(index, "image1", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+  const handleModeloImagesChange = async (modeloIndex: number, files: FileList) => {
+    const currentImages = formData.modelos[modeloIndex].images || [];
+    const remaining = 5 - currentImages.length;
+    const filesToUpload = Array.from(files).slice(0, remaining);
+
+    const uploaded = [];
+    for (const file of filesToUpload) {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('folder', 'modelos');
+      uploadFormData.append('companyName', formData.companyName || 'unknown');
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error subiendo imagen');
       }
-    } else {
-      updateModelo(index, "image1", null);
+
+      const { url, publicId } = await response.json();
+      uploaded.push({ url, publicId });
     }
+
+    const updatedModelos = [...formData.modelos];
+    updatedModelos[modeloIndex].images = [...currentImages, ...uploaded];
+    setFormData((prev) => ({ ...prev, modelos: updatedModelos }));
   };
-  const handleModeloImage2Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
-        updateModelo(index, "image2", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
-      }
-    } else {
-      updateModelo(index, "image2", null);
-    }
-  };
-  const handleModeloImage3Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
-        updateModelo(index, "image3", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
-      }
-    } else {
-      updateModelo(index, "image3", null);
-    }
-  };
-  const handleModeloImage4Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'modelos');
-        updateModelo(index, "image4", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
-      }
-    } else {
-      updateModelo(index, "image4", null);
-    }
+
+  const handleRemoveModeloImage = async (modeloIndex: number, imageIndex: number) => {
+    const img = formData.modelos[modeloIndex].images[imageIndex];
+    const fd = new FormData();
+    fd.append('publicId', img.publicId);
+    await fetch('/api/upload-image', { method: 'DELETE', body: fd });
+    const updatedModelos = [...formData.modelos];
+    updatedModelos[modeloIndex].images = updatedModelos[modeloIndex].images.filter(
+      (_, i) => i !== imageIndex
+    );
+    setFormData((prev) => ({ ...prev, modelos: updatedModelos }));
   };
 
   const addProyectoRow = () => {
     setFormData((prev) => ({
       ...prev,
-      proyectos: [...prev.proyectos, { modelo: "", ubicacion: "", anio: "", superficie: "", dormitorios: "", banios: "", image1: null, image2: null, image3: null, image4: null }],
+      proyectos: [...prev.proyectos, { modelo: "", ubicacion: "", anio: "", superficie: "", dormitorios: "", banios: "", images: [] }],
     }));
   };
 
@@ -380,53 +382,47 @@ const ContainerCompanyForm = () => {
     }));
   };
 
-  const handleProyectoImage1Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
-        updateProyecto(index, "image1", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+  const handleProyectoImagesChange = async (proyectoIndex: number, files: FileList) => {
+    const currentImages = formData.proyectos[proyectoIndex].images || [];
+    const remaining = 5 - currentImages.length;
+    const filesToUpload = Array.from(files).slice(0, remaining);
+
+    const uploaded = [];
+    for (const file of filesToUpload) {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('folder', 'proyectos');
+      uploadFormData.append('companyName', formData.companyName || 'unknown');
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error subiendo imagen');
       }
-    } else {
-      updateProyecto(index, "image1", null);
+
+      const { url, publicId } = await response.json();
+      uploaded.push({ url, publicId });
     }
+
+    const updatedProyectos = [...formData.proyectos];
+    updatedProyectos[proyectoIndex].images = [...currentImages, ...uploaded];
+    setFormData((prev) => ({ ...prev, proyectos: updatedProyectos }));
   };
-  const handleProyectoImage2Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
-        updateProyecto(index, "image2", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
-      }
-    } else {
-      updateProyecto(index, "image2", null);
-    }
-  };
-  const handleProyectoImage3Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
-        updateProyecto(index, "image3", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
-      }
-    } else {
-      updateProyecto(index, "image3", null);
-    }
-  };
-  const handleProyectoImage4Change = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const imageUrl = await uploadImageToCloudinary(file, 'proyectos');
-        updateProyecto(index, "image4", imageUrl);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
-      }
-    } else {
-      updateProyecto(index, "image4", null);
-    }
+
+  const handleRemoveProyectoImage = async (proyectoIndex: number, imageIndex: number) => {
+    const img = formData.proyectos[proyectoIndex].images[imageIndex];
+    const fd = new FormData();
+    fd.append('publicId', img.publicId);
+    await fetch('/api/upload-image', { method: 'DELETE', body: fd });
+    const updatedProyectos = [...formData.proyectos];
+    updatedProyectos[proyectoIndex].images = updatedProyectos[proyectoIndex].images.filter(
+      (_, i) => i !== imageIndex
+    );
+    setFormData((prev) => ({ ...prev, proyectos: updatedProyectos }));
   };
 
   const addClienteRow = () => {
@@ -443,7 +439,7 @@ const ContainerCompanyForm = () => {
     }));
   };
 
-  const updateCliente = (index: number, field: string, value: string | File | null) => {
+  const updateCliente = (index: number, field: string, value: string | { url: string; publicId: string } | null) => {
     setFormData((prev) => ({
       ...prev,
       clientes: prev.clientes.map((cliente, i) =>
@@ -455,14 +451,30 @@ const ContainerCompanyForm = () => {
   const handleClienteImageChange = async (index: number, file: File | null) => {
     if (file) {
       try {
-        const imageUrl = await uploadImageToCloudinary(file, 'clientes');
-        updateCliente(index, "image", imageUrl);
+        const image = await uploadImageToCloudinary(file, 'clientes');
+        updateCliente(index, "image", image);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
       }
     } else {
       updateCliente(index, "image", null);
     }
+  };
+
+  const handleRemoveClienteImage = async (clienteIndex: number) => {
+    const updatedClientes = [...formData.clientes];
+    const img = updatedClientes[clienteIndex].image;
+    if (img) {
+      try {
+        const fd = new FormData();
+        fd.append('publicId', img.publicId);
+        await fetch('/api/upload-image', { method: 'DELETE', body: fd });
+      } catch (err) {
+        // ignore
+      }
+    }
+    updatedClientes[clienteIndex].image = null;
+    setFormData((prev) => ({ ...prev, clientes: updatedClientes }));
   };
 
   // Funciones de validación por página
@@ -931,30 +943,25 @@ const ContainerCompanyForm = () => {
       formDataToSend.append('importante', formData.importante || '');
 
       // Logo como URL (no como archivo)
-      if (formData.logo && typeof formData.logo === 'string') {
-        formDataToSend.append('logoUrl', formData.logo);
+      if (formData.logo) {
+        const logoUrl = typeof formData.logo === 'string' ? formData.logo : formData.logo.url;
+        formDataToSend.append('logoUrl', logoUrl);
       }
 
       // Convertir modelos, proyectos y clientes a formato con URLs
       const modelosWithUrls = formData.modelos.map(modelo => ({
         ...modelo,
-        image1: typeof modelo.image1 === 'string' ? modelo.image1 : null,
-        image2: typeof modelo.image2 === 'string' ? modelo.image2 : null,
-        image3: typeof modelo.image3 === 'string' ? modelo.image3 : null,
-        image4: typeof modelo.image4 === 'string' ? modelo.image4 : null,
+        images: modelo.images.map(img => img.url),
       }));
 
       const proyectosWithUrls = formData.proyectos.map(proyecto => ({
         ...proyecto,
-        image1: typeof proyecto.image1 === 'string' ? proyecto.image1 : null,
-        image2: typeof proyecto.image2 === 'string' ? proyecto.image2 : null,
-        image3: typeof proyecto.image3 === 'string' ? proyecto.image3 : null,
-        image4: typeof proyecto.image4 === 'string' ? proyecto.image4 : null,
+        images: proyecto.images.map(img => img.url),
       }));
 
       const clientesWithUrls = formData.clientes.map(cliente => ({
         ...cliente,
-        image: typeof cliente.image === 'string' ? cliente.image : null,
+        image: cliente.image ? (typeof cliente.image === 'string' ? cliente.image : cliente.image.url) : null,
       }));
 
       // Arrays como JSON (ahora con URLs)
@@ -1091,30 +1098,57 @@ const ContainerCompanyForm = () => {
               <label className="block text-lg font-bold mb-3" style={labelStyle}>
                 5. Suba el logo de la empresa<span style={asteriskStyle}>*</span>
               </label>
-              <div className={`border-2 border-dashed rounded-lg p-6 text-center ${validationErrors.logo ? 'border-red-400' : ''}`} style={{ borderColor: validationErrors.logo ? '#f87171' : '#817D79' }}>
-                <input
-                  type="file"
-                  accept=".png,.jpg,.jpeg"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="logo-upload"
-                  required
-                />
-                <label htmlFor="logo-upload" className="cursor-pointer group">
-                  <Upload
-                    size={20}
-                    className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+
+              {/* Preview si hay logo */}
+              {formData.logo && (
+                <div className="mb-3">
+                  <div className="relative group inline-block">
+                    <Image
+                      src={formData.logo.url}
+                      alt="Logo"
+                      width={128}
+                      height={128}
+                      className="w-32 h-32 object-contain bg-white/5 rounded border-2"
+                      style={{ borderColor: '#817D79' }}
+                      unoptimized
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogoImage}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Botón de subida */}
+              {!formData.logo && (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center ${validationErrors.logo ? 'border-red-400' : ''}`}
+                  style={{ borderColor: validationErrors.logo ? '#f87171' : '#817D79' }}
+                >
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="logo-upload"
+                    required
                   />
-                  <div className="text-sm mb-1 text-[#817D79] group-hover:text-white transition-colors duration-200">
-                    Subir imagen
-                  </div>
-                </label>
-                {formData.logo && (
-                  <div className="mt-2 text-sm" style={labelStyle}>
-                    Archivo: {getFileName(formData.logo)}
-                  </div>
-                )}
-              </div>
+                  <label htmlFor="logo-upload" className="cursor-pointer group">
+                    <Upload
+                      size={24}
+                      className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                    />
+                    <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
+                      Subir logo
+                    </div>
+                  </label>
+                </div>
+              )}
+
               <ErrorMessage error={validationErrors.logo} />
             </div>
 
@@ -1328,37 +1362,6 @@ const ContainerCompanyForm = () => {
               </div>
               <ErrorMessage error={validationErrors.specialties} />
 
-              {/* {formData.specialties.length > 0 && (
-                <div className="mt-4 p-3 rounded-md" style={{ backgroundColor: "#30302E" }}>
-                  <p className="text-xs mb-2" style={descStyle}>
-                    Especialidades seleccionadas ({formData.specialties.length}):
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.specialties.map((specialty) => {
-                      const option = [
-                        { value: "arquitectura-diseño", label: "Arquitectura y diseño" },
-                        { value: "construccion-montaje", label: "Construcción y montaje" },
-                        { value: "diseño-interiores", label: "Diseño de interiores" },
-                        { value: "gestion-proyectos", label: "Gestión de proyectos" },
-                        { value: "asesoramiento-tecnico", label: "Asesoramiento técnico" },
-                        { value: "ingenieria-estructural", label: "Ingeniería estructural" },
-                        { value: "decoracion-ambientacion", label: "Decoración y ambientación" }
-                      ].find(opt => opt.value === specialty);
-
-                      return (
-                        <span
-                          key={specialty}
-                          className="px-2 py-1 rounded text-xs"
-                          style={{ backgroundColor: "#F0EFED", color: "#191919" }}
-                        >
-                          {option?.label || specialty}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )} */}
-
               <input
                 type="hidden"
                 name="specialties-validation"
@@ -1500,38 +1503,6 @@ const ContainerCompanyForm = () => {
                 ))}
               </div>
               <ErrorMessage error={validationErrors.diferencialCompetitivo} />
-
-              {/* {formData.diferencialCompetitivo.length > 0 && (
-                <div className="mt-4 p-3 rounded-md" style={{ backgroundColor: "#30302E" }}>
-                  <p className="text-xs mb-2" style={descStyle}>
-                    Diferenciales seleccionados ({formData.diferencialCompetitivo.length}):
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.diferencialCompetitivo.map((diferencial) => {
-                      const option = [
-                        { value: "precio-competitivo", label: "Precio competitivo" },
-                        { value: "rapidez-entrega", label: "Rapidez en entrega" },
-                        { value: "calidad-materiales", label: "Calidad de materiales" },
-                        { value: "disenio-innovador", label: "Diseño innovador" },
-                        { value: "servicio-personalizado", label: "Servicio personalizado" },
-                        { value: "experiencia-trayectoria", label: "Experiencia y trayectoria" },
-                        { value: "garantia-extendida", label: "Garantías extendidas" },
-                        { value: "atencion-postventa", label: "Atención post-venta" }
-                      ].find(opt => opt.value === diferencial);
-
-                      return (
-                        <span
-                          key={diferencial}
-                          className="px-2 py-1 rounded text-xs"
-                          style={{ backgroundColor: "#F0EFED", color: "#191919" }}
-                        >
-                          {option?.label || diferencial}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )} */}
 
               <input
                 type="hidden"
@@ -1780,92 +1751,72 @@ const ContainerCompanyForm = () => {
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>De ser posible proporcione 4 imágenes por cada modelo</label>
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 1</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleModeloImage1Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`modelo-image-1-${index}`}
-                          />
-                          <label htmlFor={`modelo-image-1-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
-                            />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(modelo.image1)}
-                            </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-semibold" style={labelStyle}>
+                            Imágenes del modelo
                           </label>
+                          <span className="text-sm text-[#817D79]">
+                            {modelo.images?.length || 0}/5
+                          </span>
                         </div>
-                      </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 2</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleModeloImage2Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`modelo-image-2-${index}`}
-                          />
-                          <label htmlFor={`modelo-image-2-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
-                            />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(modelo.image2)}
-                            </div>
-                          </label>
-                        </div>
-                      </div>
+                        <p className="text-sm text-[#817D79] mb-3">
+                          Si es posible, subí 4 fotos
+                        </p>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 3</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleModeloImage3Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`modelo-image-3-${index}`}
-                          />
-                          <label htmlFor={`modelo-image-3-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
-                            />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(modelo.image3)}
-                            </div>
-                          </label>
-                        </div>
-                      </div>
+                        {/* Grid de imágenes subidas */}
+                        {modelo.images && modelo.images.length > 0 && (
+                          <div className="grid grid-cols-4 gap-3 mb-3">
+                            {modelo.images.map((img, imgIndex) => (
+                              <div key={imgIndex} className="relative group h-24">
+                                <Image
+                                  src={img.url}
+                                  alt={`Imagen ${imgIndex + 1}`}
+                                  fill
+                                  sizes="(min-width: 768px) 25vw, 50vw"
+                                  className="object-cover rounded"
+                                  unoptimized
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveModeloImage(index, imgIndex)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  ×
+                                </button>
+                                <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                                  {imgIndex + 1}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 4</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleModeloImage4Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`modelo-image-4-${index}`}
-                          />
-                          <label htmlFor={`modelo-image-4-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                        {/* Botón de subida */}
+                        {(!modelo.images || modelo.images.length < 5) && (
+                          <div className="border-2 border-dashed rounded p-6 text-center" style={{ borderColor: '#817D79' }}>
+                            <input
+                              type="file"
+                              accept=".png,.jpg,.jpeg"
+                              multiple
+                              onChange={async (e) => e.target.files && await handleModeloImagesChange(index, e.target.files)}
+                              className="hidden"
+                              id={`modelo-images-${index}`}
                             />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(modelo.image4)}
-                            </div>
-                          </label>
-                        </div>
+                            <label htmlFor={`modelo-images-${index}`} className="cursor-pointer group">
+                              <Upload
+                                size={24}
+                                className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                              />
+                              <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
+                                {modelo.images?.length > 0 ? 'Agregar más fotos' : 'Subir fotos'}
+                              </div>
+                              <div className="text-xs text-[#817D79]/70 mt-1">
+                                Podés seleccionar varias a la vez
+                              </div>
+                            </label>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1999,94 +1950,73 @@ const ContainerCompanyForm = () => {
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>De ser posible proporcione 4 imágenes por cada proyecto</label>
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 1</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleProyectoImage1Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`project-image-1-${index}`}
-                          />
-                          <label htmlFor={`project-image-1-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
-                            />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(project.image1)}
-                            </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-semibold" style={labelStyle}>
+                            Imágenes del proyecto
                           </label>
+                          <span className="text-sm text-[#817D79]">
+                            {project.images?.length || 0}/5
+                          </span>
                         </div>
-                      </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 2</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleProyectoImage2Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`project-image-2-${index}`}
-                          />
-                          <label htmlFor={`project-image-2-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                        <p className="text-sm text-[#817D79] mb-3">
+                          Si es posible, subí 4 fotos
+                        </p>
+
+                        {/* Grid de imágenes subidas */}
+                        {project.images && project.images.length > 0 && (
+                          <div className="grid grid-cols-4 gap-3 mb-3">
+                            {project.images.map((img, imgIndex) => (
+                              <div key={imgIndex} className="relative group h-24">
+                                <Image
+                                  src={img.url}
+                                  alt={`Imagen ${imgIndex + 1}`}
+                                  fill
+                                  sizes="(min-width: 768px) 25vw, 50vw"
+                                  className="object-cover rounded"
+                                  unoptimized
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveProyectoImage(index, imgIndex)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  ×
+                                </button>
+                                <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                                  {imgIndex + 1}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Botón de subida */}
+                        {(!project.images || project.images.length < 5) && (
+                          <div className="border-2 border-dashed rounded p-6 text-center" style={{ borderColor: '#817D79' }}>
+                            <input
+                              type="file"
+                              accept=".png,.jpg,.jpeg"
+                              multiple
+                              onChange={async (e) => e.target.files && await handleProyectoImagesChange(index, e.target.files)}
+                              className="hidden"
+                              id={`proyecto-images-${index}`}
                             />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(project.image2)}
-                            </div>
-                          </label>
-                        </div>
+                            <label htmlFor={`proyecto-images-${index}`} className="cursor-pointer group">
+                              <Upload
+                                size={24}
+                                className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                              />
+                              <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
+                                {project.images?.length > 0 ? 'Agregar más fotos' : 'Subir fotos'}
+                              </div>
+                              <div className="text-xs text-[#817D79]/70 mt-1">
+                                Podés seleccionar varias a la vez
+                              </div>
+                            </label>
+                          </div>
+                        )}
                       </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 3</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleProyectoImage3Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`project-image-3-${index}`}
-                          />
-                          <label htmlFor={`project-image-3-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
-                            />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(project.image3)}
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen 4</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleProyectoImage4Change(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`project-image-4-${index}`}
-                          />
-                          <label htmlFor={`project-image-4-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
-                            />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(project.image4)}
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-
                     </div>
                   </div>
                 ))}
@@ -2185,27 +2115,56 @@ const ContainerCompanyForm = () => {
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Imagen</label>
-                        <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
-                          <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg"
-                            onChange={async (_e) => _e.target.files && await handleClienteImageChange(index, _e.target.files[0])}
-                            className="hidden"
-                            id={`cliente-image-${index}`}
-                          />
-                          <label htmlFor={`cliente-image-${index}`} className="cursor-pointer group">
-                            <Upload
-                              size={20}
-                              className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
-                            />
-                            <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                              {getFileName(cliente.image)}
-                            </div>
-                          </label>
-                        </div>
-                      </div>
+                        <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                          Imagen
+                        </label>
 
+                        {/* Preview si hay imagen */}
+                        {cliente.image && (
+                          <div className="mb-3">
+                            <div className="relative group inline-block">
+                              <Image
+                                src={cliente.image.url}
+                                alt="Cliente"
+                                width={128}
+                                height={128}
+                                className="w-32 h-32 object-cover rounded border-2"
+                                style={{ borderColor: '#817D79' }}
+                                unoptimized
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveClienteImage(index)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Botón de subida */}
+                        {!cliente.image && (
+                          <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
+                            <input
+                              type="file"
+                              accept=".png,.jpg,.jpeg"
+                              onChange={async (e) => e.target.files && await handleClienteImageChange(index, e.target.files[0])}
+                              className="hidden"
+                              id={`cliente-image-${index}`}
+                            />
+                            <label htmlFor={`cliente-image-${index}`} className="cursor-pointer group">
+                              <Upload
+                                size={20}
+                                className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                              />
+                              <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
+                                Subir imagen
+                              </div>
+                            </label>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2437,8 +2396,6 @@ const ContainerCompanyForm = () => {
             ></div>
           </div>
         </div>
-
-
 
         <form onSubmit={handleSubmit}>
           {renderStep()}

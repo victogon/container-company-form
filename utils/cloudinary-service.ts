@@ -28,7 +28,7 @@ export class CloudinaryService {
         file: File,
         folder: string,
         companyName: string
-    ): Promise<string> {
+    ): Promise<{ url: string; publicId: string }> {
         try {
             // Convertir File a base64
             const buffer = await file.arrayBuffer();
@@ -52,7 +52,7 @@ export class CloudinaryService {
             const result = await cloudinary.uploader.upload(dataURI, uploadOptions);
 
             console.log(`✅ Imagen subida a Cloudinary: ${result.secure_url}`);
-            return result.secure_url;
+            return { url: result.secure_url, publicId: result.public_id };
 
         } catch (error) {
             console.error('❌ Error subiendo imagen a Cloudinary:', error);
@@ -67,7 +67,7 @@ export class CloudinaryService {
         files: (File | null)[],
         folder: string,
         companyName: string
-    ): Promise<(string | null)[]> {
+    ): Promise<({ url: string; publicId: string } | null)[]> {
         const uploadPromises = files.map(async (file, index) => {
             if (!file) return null;
 

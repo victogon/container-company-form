@@ -79,8 +79,9 @@ test.describe('Container Company Form - Validación', () => {
       });
     }
     
-    // Esperar a que el logo se procese
-    await page.waitForTimeout(1000);
+    // Esperar a que la imagen se suba completamente a Cloudinary
+    // Verificamos que aparezca el preview del logo (img con alt="Logo")
+    await expect(page.locator('img[alt="Logo"]')).toBeVisible({ timeout: 15000 });
     
     // Avanzar al siguiente paso
     await page.click('button:has-text("Siguiente")');

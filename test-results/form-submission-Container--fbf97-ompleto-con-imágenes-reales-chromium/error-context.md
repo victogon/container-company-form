@@ -8,32 +8,374 @@
         - heading "Información para desarrollo web" [level=1] [ref=e6]
         - paragraph [ref=e7]: Para crear tu web personalizada necesitamos la siguiente información
       - generic [ref=e9]:
-        - generic [ref=e10]: Paso 9 de 9
-        - generic [ref=e11]: Mensajes y comunicación de la empresa
+        - generic [ref=e10]: Paso 6 de 9
+        - generic [ref=e11]: Proyectos
       - generic [ref=e14]:
-        - generic [ref=e15]:
-          - generic [ref=e16]:
-            - generic [ref=e17]:
-              - text: 33. ¿Tienen alguna frase o mensaje que los identifique como empresa?
-              - generic [ref=e18]: "*"
-            - paragraph [ref=e19]: Si tienen un slogan o frase que usen habitualmente, compártanla
-            - textbox "Tu respuesta" [ref=e20]: Construimos tu hogar sustentable con la innovación de los containers y la calidez del diseño personalizado
-          - generic [ref=e21]:
-            - generic [ref=e22]:
-              - text: 34. ¿Cómo les gusta describir su trabajo cuando hablan con clientes?
-              - generic [ref=e23]: "*"
-            - paragraph [ref=e24]: ¿Qué les dicen cuando les preguntan qué hacen? ¿Cómo se describen en pocas palabras?
-            - textbox "Tu respuesta" [ref=e25]: Transformamos containers marítimos en hogares únicos y sustentables. Combinamos diseño arquitectónico de vanguardia con construcción rápida y eficiente, creando espacios que respetan el medio ambiente sin comprometer el confort y la estética.
-          - generic [ref=e26]:
-            - generic [ref=e27]:
-              - text: 35. ¿Hay algo importante sobre su empresa que quieran que sea visible en la web?
-              - generic [ref=e28]: "*"
-            - paragraph [ref=e29]: Certificaciones, premios, servicios especiales, garantías, o cualquier información que consideren relevante para sus clientes
-            - textbox "Tu respuesta" [ref=e30]: "Certificación LEED Gold en construcción sustentable Garantía estructural de 15 años Tiempo de construcción: 45-90 días Financiación propia disponible Asesoramiento integral desde el diseño hasta la entrega Servicio post-venta y mantenimiento Más de 200 proyectos entregados en Argentina"
-        - generic [ref=e31]:
-          - button "Anterior" [ref=e32] [cursor=pointer]:
-            - img [ref=e33] [cursor=pointer]
-            - generic [ref=e35] [cursor=pointer]: Anterior
-          - button "Enviar" [ref=e36] [cursor=pointer]
-  - alert [ref=e37]
+        - generic [ref=e16]:
+          - generic [ref=e17]: 26. Si tiene proyectos realizados
+          - paragraph [ref=e18]: Muestre sus mejores proyectos con imágenes y descripción
+          - generic [ref=e19]:
+            - generic [ref=e20]:
+              - generic [ref=e21]:
+                - heading "Proyecto 1" [level=4] [ref=e22]
+                - button [ref=e23]:
+                  - img [ref=e24]
+              - generic [ref=e27]:
+                - generic [ref=e28]:
+                  - generic [ref=e29]: Modelo
+                  - 'textbox "Ejemplo: Compacta" [ref=e30]': Casa Sustentable Nordelta
+                - generic [ref=e31]:
+                  - generic [ref=e32]: Ubicación
+                  - 'textbox "Ejemplo: Canelones" [ref=e33]': Nordelta, Buenos Aires
+                - generic [ref=e34]:
+                  - generic [ref=e35]: Año
+                  - 'textbox "Ejemplo: 2025" [ref=e36]': "2023"
+                - generic [ref=e37]:
+                  - generic [ref=e38]: Superficie (m²)
+                  - 'textbox "Ejemplo: 100 (m²)" [ref=e39]': "120"
+                - generic [ref=e40]:
+                  - generic [ref=e41]: Dormitorios
+                  - 'textbox "Ejemplo: 2" [ref=e42]': "3"
+                - generic [ref=e43]:
+                  - generic [ref=e44]: Baños
+                  - 'textbox "Ejemplo: 1" [ref=e45]': "2"
+                - generic [ref=e46]:
+                  - generic [ref=e47]:
+                    - generic [ref=e48]: Imágenes del proyecto
+                    - generic [ref=e49]: 4/5
+                  - paragraph [ref=e50]: Si es posible, subí 4 fotos
+                  - generic [ref=e51]:
+                    - generic [ref=e52]:
+                      - img "Imagen 1" [ref=e53]
+                      - button "×" [ref=e54]
+                      - generic [ref=e55]: "1"
+                    - generic [ref=e56]:
+                      - img "Imagen 2" [ref=e57]
+                      - button "×" [ref=e58]
+                      - generic [ref=e59]: "2"
+                    - generic [ref=e60]:
+                      - img "Imagen 3" [ref=e61]
+                      - button "×" [ref=e62]
+                      - generic [ref=e63]: "3"
+                    - generic [ref=e64]:
+                      - img "Imagen 4" [ref=e65]
+                      - button "×" [ref=e66]
+                      - generic [ref=e67]: "4"
+                  - generic [ref=e69] [cursor=pointer]:
+                    - img [ref=e70] [cursor=pointer]
+                    - generic [ref=e73] [cursor=pointer]: Agregar más fotos
+                    - generic [ref=e74] [cursor=pointer]: Podés seleccionar varias a la vez
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - heading "Proyecto 2" [level=4] [ref=e77]
+                - button [ref=e78]:
+                  - img [ref=e79]
+              - generic [ref=e82]:
+                - generic [ref=e83]:
+                  - generic [ref=e84]: Modelo
+                  - 'textbox "Ejemplo: Compacta" [ref=e85]': Oficinas Corporativas Puerto Madero
+                - generic [ref=e86]:
+                  - generic [ref=e87]: Ubicación
+                  - 'textbox "Ejemplo: Canelones" [ref=e88]': Puerto Madero, CABA
+                - generic [ref=e89]:
+                  - generic [ref=e90]: Año
+                  - 'textbox "Ejemplo: 2025" [ref=e91]': "2022"
+                - generic [ref=e92]:
+                  - generic [ref=e93]: Superficie (m²)
+                  - 'textbox "Ejemplo: 100 (m²)" [ref=e94]': "300"
+                - generic [ref=e95]:
+                  - generic [ref=e96]: Dormitorios
+                  - 'textbox "Ejemplo: 2" [ref=e97]': "0"
+                - generic [ref=e98]:
+                  - generic [ref=e99]: Baños
+                  - 'textbox "Ejemplo: 1" [ref=e100]': "4"
+                - generic [ref=e101]:
+                  - generic [ref=e102]:
+                    - generic [ref=e103]: Imágenes del proyecto
+                    - generic [ref=e104]: 4/5
+                  - paragraph [ref=e105]: Si es posible, subí 4 fotos
+                  - generic [ref=e106]:
+                    - generic [ref=e107]:
+                      - img "Imagen 1" [ref=e108]
+                      - button "×" [ref=e109]
+                      - generic [ref=e110]: "1"
+                    - generic [ref=e111]:
+                      - img "Imagen 2" [ref=e112]
+                      - button "×" [ref=e113]
+                      - generic [ref=e114]: "2"
+                    - generic [ref=e115]:
+                      - img "Imagen 3" [ref=e116]
+                      - button "×" [ref=e117]
+                      - generic [ref=e118]: "3"
+                    - generic [ref=e119]:
+                      - img "Imagen 4" [ref=e120]
+                      - button "×" [ref=e121]
+                      - generic [ref=e122]: "4"
+                  - generic [ref=e124] [cursor=pointer]:
+                    - img [ref=e125] [cursor=pointer]
+                    - generic [ref=e128] [cursor=pointer]: Agregar más fotos
+                    - generic [ref=e129] [cursor=pointer]: Podés seleccionar varias a la vez
+            - generic [ref=e130]:
+              - generic [ref=e131]:
+                - heading "Proyecto 3" [level=4] [ref=e132]
+                - button [ref=e133]:
+                  - img [ref=e134]
+              - generic [ref=e137]:
+                - generic [ref=e138]:
+                  - generic [ref=e139]: Modelo
+                  - 'textbox "Ejemplo: Compacta" [ref=e140]': Complejo Habitacional Pilar
+                - generic [ref=e141]:
+                  - generic [ref=e142]: Ubicación
+                  - 'textbox "Ejemplo: Canelones" [ref=e143]': Pilar, Buenos Aires
+                - generic [ref=e144]:
+                  - generic [ref=e145]: Año
+                  - 'textbox "Ejemplo: 2025" [ref=e146]': "2023"
+                - generic [ref=e147]:
+                  - generic [ref=e148]: Superficie (m²)
+                  - 'textbox "Ejemplo: 100 (m²)" [ref=e149]': "180"
+                - generic [ref=e150]:
+                  - generic [ref=e151]: Dormitorios
+                  - 'textbox "Ejemplo: 2" [ref=e152]': "4"
+                - generic [ref=e153]:
+                  - generic [ref=e154]: Baños
+                  - 'textbox "Ejemplo: 1" [ref=e155]': "3"
+                - generic [ref=e156]:
+                  - generic [ref=e157]:
+                    - generic [ref=e158]: Imágenes del proyecto
+                    - generic [ref=e159]: 4/5
+                  - paragraph [ref=e160]: Si es posible, subí 4 fotos
+                  - generic [ref=e161]:
+                    - generic [ref=e162]:
+                      - img "Imagen 1" [ref=e163]
+                      - button "×" [ref=e164]
+                      - generic [ref=e165]: "1"
+                    - generic [ref=e166]:
+                      - img "Imagen 2" [ref=e167]
+                      - button "×" [ref=e168]
+                      - generic [ref=e169]: "2"
+                    - generic [ref=e170]:
+                      - img "Imagen 3" [ref=e171]
+                      - button "×" [ref=e172]
+                      - generic [ref=e173]: "3"
+                    - generic [ref=e174]:
+                      - img "Imagen 4" [ref=e175]
+                      - button "×" [ref=e176]
+                      - generic [ref=e177]: "4"
+                  - generic [ref=e179] [cursor=pointer]:
+                    - img [ref=e180] [cursor=pointer]
+                    - generic [ref=e183] [cursor=pointer]: Agregar más fotos
+                    - generic [ref=e184] [cursor=pointer]: Podés seleccionar varias a la vez
+            - generic [ref=e185]:
+              - generic [ref=e186]:
+                - heading "Proyecto 4" [level=4] [ref=e187]
+                - button [ref=e188]:
+                  - img [ref=e189]
+              - generic [ref=e192]:
+                - generic [ref=e193]:
+                  - generic [ref=e194]: Modelo
+                  - 'textbox "Ejemplo: Compacta" [ref=e195]': Centro Comercial Rosario
+                - generic [ref=e196]:
+                  - generic [ref=e197]: Ubicación
+                  - 'textbox "Ejemplo: Canelones" [ref=e198]': Rosario, Santa Fe
+                - generic [ref=e199]:
+                  - generic [ref=e200]: Año
+                  - 'textbox "Ejemplo: 2025" [ref=e201]': "2022"
+                - generic [ref=e202]:
+                  - generic [ref=e203]: Superficie (m²)
+                  - 'textbox "Ejemplo: 100 (m²)" [ref=e204]': "500"
+                - generic [ref=e205]:
+                  - generic [ref=e206]: Dormitorios
+                  - 'textbox "Ejemplo: 2" [ref=e207]': "0"
+                - generic [ref=e208]:
+                  - generic [ref=e209]: Baños
+                  - 'textbox "Ejemplo: 1" [ref=e210]': "6"
+                - generic [ref=e211]:
+                  - generic [ref=e212]:
+                    - generic [ref=e213]: Imágenes del proyecto
+                    - generic [ref=e214]: 4/5
+                  - paragraph [ref=e215]: Si es posible, subí 4 fotos
+                  - generic [ref=e216]:
+                    - generic [ref=e217]:
+                      - img "Imagen 1" [ref=e218]
+                      - button "×" [ref=e219]
+                      - generic [ref=e220]: "1"
+                    - generic [ref=e221]:
+                      - img "Imagen 2" [ref=e222]
+                      - button "×" [ref=e223]
+                      - generic [ref=e224]: "2"
+                    - generic [ref=e225]:
+                      - img "Imagen 3" [ref=e226]
+                      - button "×" [ref=e227]
+                      - generic [ref=e228]: "3"
+                    - generic [ref=e229]:
+                      - img "Imagen 4" [ref=e230]
+                      - button "×" [ref=e231]
+                      - generic [ref=e232]: "4"
+                  - generic [ref=e234] [cursor=pointer]:
+                    - img [ref=e235] [cursor=pointer]
+                    - generic [ref=e238] [cursor=pointer]: Agregar más fotos
+                    - generic [ref=e239] [cursor=pointer]: Podés seleccionar varias a la vez
+            - generic [ref=e240]:
+              - generic [ref=e241]:
+                - heading "Proyecto 5" [level=4] [ref=e242]
+                - button [ref=e243]:
+                  - img [ref=e244]
+              - generic [ref=e247]:
+                - generic [ref=e248]:
+                  - generic [ref=e249]: Modelo
+                  - 'textbox "Ejemplo: Compacta" [ref=e250]': Villa Moderna Tigre
+                - generic [ref=e251]:
+                  - generic [ref=e252]: Ubicación
+                  - 'textbox "Ejemplo: Canelones" [ref=e253]': Tigre, Buenos Aires
+                - generic [ref=e254]:
+                  - generic [ref=e255]: Año
+                  - 'textbox "Ejemplo: 2025" [ref=e256]': "2023"
+                - generic [ref=e257]:
+                  - generic [ref=e258]: Superficie (m²)
+                  - 'textbox "Ejemplo: 100 (m²)" [ref=e259]': "250"
+                - generic [ref=e260]:
+                  - generic [ref=e261]: Dormitorios
+                  - 'textbox "Ejemplo: 2" [ref=e262]': "5"
+                - generic [ref=e263]:
+                  - generic [ref=e264]: Baños
+                  - 'textbox "Ejemplo: 1" [ref=e265]': "4"
+                - generic [ref=e266]:
+                  - generic [ref=e267]:
+                    - generic [ref=e268]: Imágenes del proyecto
+                    - generic [ref=e269]: 4/5
+                  - paragraph [ref=e270]: Si es posible, subí 4 fotos
+                  - generic [ref=e271]:
+                    - generic [ref=e272]:
+                      - img "Imagen 1" [ref=e273]
+                      - button "×" [ref=e274]
+                      - generic [ref=e275]: "1"
+                    - generic [ref=e276]:
+                      - img "Imagen 2" [ref=e277]
+                      - button "×" [ref=e278]
+                      - generic [ref=e279]: "2"
+                    - generic [ref=e280]:
+                      - img "Imagen 3" [ref=e281]
+                      - button "×" [ref=e282]
+                      - generic [ref=e283]: "3"
+                    - generic [ref=e284]:
+                      - img "Imagen 4" [ref=e285]
+                      - button "×" [ref=e286]
+                      - generic [ref=e287]: "4"
+                  - generic [ref=e289] [cursor=pointer]:
+                    - img [ref=e290] [cursor=pointer]
+                    - generic [ref=e293] [cursor=pointer]: Agregar más fotos
+                    - generic [ref=e294] [cursor=pointer]: Podés seleccionar varias a la vez
+            - generic [ref=e295]:
+              - generic [ref=e296]:
+                - heading "Proyecto 6" [level=4] [ref=e297]
+                - button [ref=e298]:
+                  - img [ref=e299]
+              - generic [ref=e302]:
+                - generic [ref=e303]:
+                  - generic [ref=e304]: Modelo
+                  - 'textbox "Ejemplo: Compacta" [ref=e305]': Oficina Tech Palermo
+                - generic [ref=e306]:
+                  - generic [ref=e307]: Ubicación
+                  - 'textbox "Ejemplo: Canelones" [ref=e308]': Palermo, CABA
+                - generic [ref=e309]:
+                  - generic [ref=e310]: Año
+                  - 'textbox "Ejemplo: 2025" [ref=e311]': "2023"
+                - generic [ref=e312]:
+                  - generic [ref=e313]: Superficie (m²)
+                  - 'textbox "Ejemplo: 100 (m²)" [ref=e314]': "150"
+                - generic [ref=e315]:
+                  - generic [ref=e316]: Dormitorios
+                  - 'textbox "Ejemplo: 2" [ref=e317]': "0"
+                - generic [ref=e318]:
+                  - generic [ref=e319]: Baños
+                  - 'textbox "Ejemplo: 1" [ref=e320]': "2"
+                - generic [ref=e321]:
+                  - generic [ref=e322]:
+                    - generic [ref=e323]: Imágenes del proyecto
+                    - generic [ref=e324]: 4/5
+                  - paragraph [ref=e325]: Si es posible, subí 4 fotos
+                  - generic [ref=e326]:
+                    - generic [ref=e327]:
+                      - img "Imagen 1" [ref=e328]
+                      - button "×" [ref=e329]
+                      - generic [ref=e330]: "1"
+                    - generic [ref=e331]:
+                      - img "Imagen 2" [ref=e332]
+                      - button "×" [ref=e333]
+                      - generic [ref=e334]: "2"
+                    - generic [ref=e335]:
+                      - img "Imagen 3" [ref=e336]
+                      - button "×" [ref=e337]
+                      - generic [ref=e338]: "3"
+                    - generic [ref=e339]:
+                      - img "Imagen 4" [ref=e340]
+                      - button "×" [ref=e341]
+                      - generic [ref=e342]: "4"
+                  - generic [ref=e344] [cursor=pointer]:
+                    - img [ref=e345] [cursor=pointer]
+                    - generic [ref=e348] [cursor=pointer]: Agregar más fotos
+                    - generic [ref=e349] [cursor=pointer]: Podés seleccionar varias a la vez
+            - generic [ref=e350]:
+              - generic [ref=e351]:
+                - heading "Proyecto 7" [level=4] [ref=e352]
+                - button [ref=e353]:
+                  - img [ref=e354]
+              - generic [ref=e357]:
+                - generic [ref=e358]:
+                  - generic [ref=e359]: Modelo
+                  - 'textbox "Ejemplo: Compacta" [ref=e360]': Casa Minimalista La Plata
+                - generic [ref=e361]:
+                  - generic [ref=e362]: Ubicación
+                  - 'textbox "Ejemplo: Canelones" [ref=e363]': La Plata, Buenos Aires
+                - generic [ref=e364]:
+                  - generic [ref=e365]: Año
+                  - 'textbox "Ejemplo: 2025" [ref=e366]': "2022"
+                - generic [ref=e367]:
+                  - generic [ref=e368]: Superficie (m²)
+                  - 'textbox "Ejemplo: 100 (m²)" [ref=e369]': "90"
+                - generic [ref=e370]:
+                  - generic [ref=e371]: Dormitorios
+                  - 'textbox "Ejemplo: 2" [ref=e372]': "2"
+                - generic [ref=e373]:
+                  - generic [ref=e374]: Baños
+                  - 'textbox "Ejemplo: 1" [ref=e375]': "2"
+                - generic [ref=e376]:
+                  - generic [ref=e377]:
+                    - generic [ref=e378]: Imágenes del proyecto
+                    - generic [ref=e379]: 4/5
+                  - paragraph [ref=e380]: Si es posible, subí 4 fotos
+                  - generic [ref=e381]:
+                    - generic [ref=e382]:
+                      - img "Imagen 1" [ref=e383]
+                      - button "×" [ref=e384]
+                      - generic [ref=e385]: "1"
+                    - generic [ref=e386]:
+                      - img "Imagen 2" [ref=e387]
+                      - button "×" [ref=e388]
+                      - generic [ref=e389]: "2"
+                    - generic [ref=e390]:
+                      - img "Imagen 3" [ref=e391]
+                      - button "×" [ref=e392]
+                      - generic [ref=e393]: "3"
+                    - generic [ref=e394]:
+                      - img "Imagen 4" [ref=e395]
+                      - button "×" [ref=e396]
+                      - generic [ref=e397]: "4"
+                  - generic [ref=e399] [cursor=pointer]:
+                    - img [ref=e400] [cursor=pointer]
+                    - generic [ref=e403] [cursor=pointer]: Agregar más fotos
+                    - generic [ref=e404] [cursor=pointer]: Podés seleccionar varias a la vez
+            - button "Agregar proyecto" [ref=e405]:
+              - img [ref=e406]
+              - generic [ref=e407]: Agregar proyecto
+        - generic [ref=e408]:
+          - button "Anterior" [ref=e409] [cursor=pointer]:
+            - img [ref=e410] [cursor=pointer]
+            - generic [ref=e412] [cursor=pointer]: Anterior
+          - button "Siguiente" [ref=e413] [cursor=pointer]:
+            - generic [ref=e414] [cursor=pointer]: Siguiente
+            - img [ref=e415] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e422] [cursor=pointer]:
+    - img [ref=e423] [cursor=pointer]
+  - alert [ref=e426]: Información para desarrollo web
 ```

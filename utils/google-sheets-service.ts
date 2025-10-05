@@ -236,7 +236,7 @@ class GoogleSheetsService {
             contactPerson: formData.contactPerson || '',
             phone: formData.phone || '',
             email: formData.email || '',
-            logoUrl: fileUrls.logo || '',
+            logoUrl: formData.logoUrl || '',
             brandColors: formData.brandColors || '',
             address: formData.address || '',
             businessHours: formData.businessHours || '',
@@ -286,11 +286,7 @@ class GoogleSheetsService {
         if (!modelos || modelos.length === 0) return '';
 
         return JSON.stringify(modelos.map((modelo: any, index: number) => ({
-            ...modelo,
-            image1Url: fileUrls[`modelo_${index}_image1`] || '',
-            image2Url: fileUrls[`modelo_${index}_image2`] || '',
-            image3Url: fileUrls[`modelo_${index}_image3`] || '',
-            image4Url: fileUrls[`modelo_${index}_image4`] || ''
+            ...modelo
         })));
     }
 
@@ -301,11 +297,7 @@ class GoogleSheetsService {
         if (!proyectos || proyectos.length === 0) return '';
 
         return JSON.stringify(proyectos.map((proyecto: any, index: number) => ({
-            ...proyecto,
-            image1Url: fileUrls[`proyecto_${index}_image1`] || '',
-            image2Url: fileUrls[`proyecto_${index}_image2`] || '',
-            image3Url: fileUrls[`proyecto_${index}_image3`] || '',
-            image4Url: fileUrls[`proyecto_${index}_image4`] || ''
+            ...proyecto
         })));
     }
 
@@ -315,10 +307,28 @@ class GoogleSheetsService {
     processClientesData(clientes: any[], fileUrls: FileUrls): string {
         if (!clientes || clientes.length === 0) return '';
 
-        return JSON.stringify(clientes.map((cliente: any, index: number) => ({
-            ...cliente,
-            imageUrl: fileUrls[`cliente_${index}_image`] || ''
-        })));
+        console.log('=== PROCESANDO CLIENTES ===');
+        console.log('Número de clientes recibidos:', clientes.length);
+        
+        const processedClientes = clientes.map((cliente: any, index: number) => {
+            console.log(`Cliente ${index + 1}:`, {
+                nombre: cliente.nombre,
+                ubicacion: cliente.ubicacion,
+                testimonio: cliente.testimonio,
+                image: cliente.image,
+                imageType: typeof cliente.image,
+                imageLength: cliente.image ? cliente.image.length : 0
+            });
+            
+            return {
+                ...cliente
+            };
+        });
+        
+        console.log('Clientes procesados:', processedClientes);
+        console.log('=== FIN PROCESAMIENTO CLIENTES ===');
+        
+        return JSON.stringify(processedClientes);
     }
 
     /**

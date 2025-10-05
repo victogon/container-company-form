@@ -29,17 +29,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Subir a Cloudinary
-    const imageUrl = await CloudinaryService.uploadImage(file, folder, companyName);
+    const image = await CloudinaryService.uploadImage(file, folder, companyName);
 
-    return NextResponse.json({ 
-      success: true, 
-      url: imageUrl,
+    return NextResponse.json({
+      success: true,
+      url: image.url,
+      publicId: image.publicId,
       originalName: file.name,
       size: file.size
     });
 
   } catch (error) {
     console.error('Error en upload-image:', error);
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Error interno del servidor' 
+    }, { status: 500 });
+  }
+}
+
+// Borrar imagen por publicId
+export async function DELETE(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const publicId = formData.get('publicId') as string;
+    if (!publicId) {
+      return NextResponse.json({ error: 'publicId requerido' }, { status: 400 });
+    }
+    const ok = await CloudinaryService.deleteImage(publicId);
+    return NextResponse.json({ success: ok });
+  } catch (error) {
+    console.error('Error en delete-image:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Error interno del servidor' 
     }, { status: 500 });

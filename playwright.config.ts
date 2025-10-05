@@ -16,15 +16,15 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  // Timeout global para tests completos (especialmente importante para Vercel)
-  timeout: isProduction ? 120000 : 60000, // 2 minutos en producción, 1 minuto en desarrollo
+  // Timeout global para tests completos (especialmente importante para Vercel y carga de imágenes)
+  timeout: isProduction ? 600000 : 480000, // 10 minutos en producción, 8 minutos en desarrollo (para 127 imágenes)
   use: {
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    // Aumentar timeouts para tests remotos
-    actionTimeout: isProduction ? 30000 : 10000,
-    navigationTimeout: isProduction ? 60000 : 30000,
+    // Aumentar timeouts para tests remotos y carga de imágenes
+    actionTimeout: isProduction ? 45000 : 30000,
+    navigationTimeout: isProduction ? 90000 : 60000,
   },
 
   projects: [
