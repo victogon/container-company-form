@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
 import ConfirmationScreen from './components/ConfirmationScreen';
 
 // Define interfaces for form data structure
@@ -133,20 +133,7 @@ const ContainerCompanyForm = () => {
     }
   };
 
-  // Función auxiliar para obtener el nombre del archivo de manera segura
-  const getFileName = (file: File | string | { url: string; publicId: string } | null): string => {
-    if (!file) return 'Subir imagen';
-    if (typeof file === 'string') return file;
-    if (file && typeof file === 'object' && 'url' in file) {
-      try {
-        const u = new URL(file.url);
-        return u.pathname.split('/').pop() || file.url;
-      } catch {
-        return file.url;
-      }
-    }
-    return (file as File).name;
-  };
+  
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
@@ -286,7 +273,7 @@ const ContainerCompanyForm = () => {
       const fd = new FormData();
       fd.append('publicId', formData.logo.publicId);
       await fetch('/api/upload-image', { method: 'DELETE', body: fd });
-    } catch (err) {
+    } catch {
       // Silently ignore deletion errors, still clear from form
     }
     setFormData((prev) => ({ ...prev, logo: null }));
@@ -469,7 +456,7 @@ const ContainerCompanyForm = () => {
         const fd = new FormData();
         fd.append('publicId', img.publicId);
         await fetch('/api/upload-image', { method: 'DELETE', body: fd });
-      } catch (err) {
+      } catch {
         // ignore
       }
     }
