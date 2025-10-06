@@ -106,6 +106,46 @@ const ContainerCompanyForm = () => {
     return { url: result.url, publicId: result.publicId };
   };
 
+  // Subida con XHR para poder informar progreso
+  const xhrUploadImage = (file: File, folder: string, onProgress: (loaded: number, total: number) => void): Promise<{ url: string; publicId: string }> => {
+    return new Promise((resolve, reject) => {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('folder', folder);
+      form.append('companyName', formData.companyName || 'unknown');
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload-image');
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          onProgress(event.loaded, event.total);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve({ url: result.url, publicId: result.publicId });
+          } catch (e) {
+            reject(new Error('Respuesta inválida del servidor'));
+          }
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.error || 'Error subiendo imagen'));
+          } catch {
+            reject(new Error('Error subiendo imagen'));
+          }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Error de red durante la subida'));
+      xhr.send(form);
+    });
+  };
+
 
 
 
@@ -143,6 +183,7 @@ const ContainerCompanyForm = () => {
     sheetName: string;
     filesUploaded: number;
   } | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState<{ inProgress: boolean; percent: number }>({ inProgress: false, percent: 0 });
   const [formData, setFormData] = useState<FormData>({
     companyName: '',
     contactPerson: '',
@@ -241,7 +282,15 @@ const ContainerCompanyForm = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const image = await uploadImageToCloudinary(file, 'logos');
+        // Iniciar progreso
+        setUploadingLogo({ inProgress: true, percent: 0 });
+        const image = await xhrUploadImage(file, 'logos', (loaded, total) => {
+          const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+          setUploadingLogo(prev => ({ ...prev, percent }));
+        });
+        // Finalizar progreso
+        setUploadingLogo({ inProgress: false, percent: 100 });
+
         setFormData((prev) => ({ ...prev, logo: image }));
 
         // Marcar el campo como tocado y luego validar
@@ -258,6 +307,7 @@ const ContainerCompanyForm = () => {
         });
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
+        setUploadingLogo({ inProgress: false, percent: 0 });
         e.target.value = '';
         return;
       }
@@ -1124,7 +1174,7 @@ const ContainerCompanyForm = () => {
                     id="logo-upload"
                     required
                   />
-                  <label htmlFor="logo-upload" className="cursor-pointer group">
+                  <label htmlFor="logo-upload" className={`cursor-pointer group ${uploadingLogo.inProgress ? 'opacity-60 pointer-events-none' : ''}`}>
                     <Upload
                       size={24}
                       className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
@@ -1133,6 +1183,15 @@ const ContainerCompanyForm = () => {
                       Subir logo
                     </div>
                   </label>
+
+                  {uploadingLogo.inProgress && (
+                    <div className="mt-4 text-left">
+                      <div className="text-xs text-[#817D79]">Subiendo logo… {uploadingLogo.percent}%</div>
+                      <div className="h-1.5 rounded bg-[#2a2a2a] mt-2">
+                        <div className="h-1.5 rounded bg-[#817D79]" style={{ width: `${uploadingLogo.percent}%` }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
