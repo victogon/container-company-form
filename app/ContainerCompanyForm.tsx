@@ -217,12 +217,6 @@ const ContainerCompanyForm = ({ showHeader = false, initialStep = 0 }: { showHea
   ];
 
   // Estilos
-  const inputStyle = {
-    backgroundColor: "transparent",
-    border: "1px solid #817D79",
-    color: "var(--foreground)",
-    fontSize: "16px",
-  };
   const descStyle = { color: "#817D79" };
 
 
