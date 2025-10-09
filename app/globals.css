@@ -1,26 +1,234 @@
 @import "tailwindcss";
 
+html, body {
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Tema claro tipo Kindle - colores papel */
+  --background: 45 15% 97%;  /* Blanco papel ligeramente cálido */
+  --foreground: 0 0% 15%;    /* Texto oscuro para buena legibilidad */
+  --card: 45 15% 97%;
+  --card-foreground: 0 0% 15%;
+  --popover: 45 15% 97%;
+  --popover-foreground: 0 0% 15%;
+  --primary: 0 0% 25%;       /* Gris oscuro para elementos principales */
+  --primary-foreground: 45 15% 97%;
+  --secondary: 45 10% 92%;   /* Gris muy claro para fondos secundarios */
+  --secondary-foreground: 0 0% 25%;
+  --muted: 45 10% 90%;       /* Gris claro para elementos silenciados */
+  --muted-foreground: 0 0% 45%;
+  --accent: 45 10% 88%;      /* Gris claro para acentos */
+  --accent-foreground: 0 0% 25%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 45 15% 97%;
+  --border: 0 0% 75%;        /* Bordes grises suaves */
+  --input: 45 10% 94%;       /* Fondo de inputs ligeramente gris */
+  --ring: 0 0% 45%;          /* Anillos de foco grises */
+  --radius: 0.5rem;
+  
+  /* Legacy variables for compatibility */
+  --bg-base: hsl(var(--background));
+  --fg-base: hsl(var(--foreground));
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Eliminamos el modo oscuro automático para mantener siempre el tema claro */
+.theme-light {
+  --background: 45 15% 97%;
+  --foreground: 0 0% 15%;
+}
+
+.theme-inverted {
+  --background: var(--fg-base);
+  --foreground: var(--bg-base);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+}
+
+/* Fondo tipo papel con textura sutil para simular papel de Kindle */
+.paper-texture {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(hsl(var(--muted-foreground) / 0.02) 0.5px, transparent 0.5px),
+    radial-gradient(hsl(var(--muted-foreground) / 0.015) 0.5px, transparent 0.5px);
+  background-position: 0 0, 2px 2px;
+  background-size: 8px 8px, 8px 8px;
+}
+
+/* shadcn/ui base layer */
+@layer base {
+  * {
+    @apply border-gray-300;
+  }
+  body {
+    @apply bg-stone-50 text-gray-800;
+  }
+}
+
+/* shadcn/ui form components - Tema claro */
+.form-field {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-3 text-gray-800;
+}
+
+.form-input {
+  @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base text-gray-800 file:border-0 file:bg-transparent file:text-base file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-400 transition-colors;
+}
+
+.form-textarea {
+  @apply flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base text-gray-800 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-400 transition-colors;
+}
+
+.form-select {
+  @apply flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-base text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-400 transition-colors;
+}
+
+.form-radio {
+  @apply aspect-square h-4 w-4 rounded-full border border-gray-400 text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 hover:border-gray-500 transition-colors;
+}
+
+.form-checkbox {
+  @apply h-4 w-4 rounded-sm border border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 checked:bg-gray-600 checked:text-white hover:border-gray-500 transition-colors;
+}
+
+.form-radio-label {
+  @apply flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors;
+}
+
+.form-radio-text {
+  @apply text-base text-gray-800;
+}
+
+.form-checkbox-label {
+  @apply flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors;
+}
+
+.form-checkbox-text {
+  @apply text-base text-gray-800;
+}
+
+.form-button {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+}
+
+.form-button-primary {
+  @apply bg-gray-800 text-white hover:bg-gray-700 h-10 px-4 py-2;
+}
+
+.form-button-secondary {
+  @apply bg-gray-200 text-gray-800 hover:bg-gray-300 h-10 px-4 py-2;
+}
+
+.form-error {
+  @apply text-sm font-medium text-red-600;
+}
+
+.form-description {
+  @apply text-sm text-gray-600;
+}
+
+/* Estilo unificado de placeholders */
+input::placeholder, textarea::placeholder {
+  @apply text-gray-500;
+}
+
+.form-muted {
+  @apply text-gray-600;
+}
+
+/* Button styles - Tema claro */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 cursor-pointer;
+}
+
+.btn-primary {
+  @apply bg-gray-800 text-white hover:bg-gray-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+}
+
+.btn-outline {
+  @apply border border-gray-400 bg-transparent text-gray-800 hover:bg-gray-100;
+}
+
+.btn-dashed {
+  @apply border-dashed;
+}
+
+.btn-icon {
+  @apply h-8 w-8 p-0 cursor-pointer rounded-full flex items-center justify-center transition-colors;
+}
+
+.btn-ghost {
+  @apply bg-transparent hover:bg-gray-100 text-gray-600;
+}
+
+.btn-destructive {
+  @apply bg-red-500 text-white hover:bg-red-600;
+}
+
+/* Mejorar hover de upload */
+.upload-hover {
+  @apply transition-all duration-300 hover:bg-gray-50 hover:border-gray-500;
+}
+
+.upload-hover .upload-icon {
+  @apply transition-colors duration-300;
+}
+
+.upload-hover:hover .upload-icon {
+  @apply text-gray-800;
+}
+
+.upload-hover .upload-text {
+  @apply transition-colors duration-300;
+}
+
+.upload-hover:hover .upload-text {
+  @apply text-gray-800;
+}
+
+/* Hover rojo para iconos de papelera */
+.btn-icon.btn-ghost:hover {
+  @apply text-red-500 bg-red-50;
+}
+
+/* Prevenir zoom automático en móviles - Asegurar 16px mínimo en todos los inputs */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  
+  /* Mantener placeholders legibles */
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 16px !important;
+  }
 }

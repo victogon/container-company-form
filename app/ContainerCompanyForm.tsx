@@ -23,6 +23,7 @@ interface Proyecto {
   superficie: string;
   dormitorios: string;
   banios: string;
+  descripcion: string;
   images: { url: string; publicId: string }[];
 }
 
@@ -62,6 +63,8 @@ interface FormData {
   proyectos: Proyecto[];
   clientes: Cliente[];
   calculadoraOption: string;
+  metodoCalculo: string;
+  explicacionCalculo: string;
   rangoMetros: string;
   precioCategoria: string;
   precioDifOpcion: string;
@@ -80,31 +83,18 @@ interface ValidationErrors {
 
 // Límites y umbrales eliminados
 
-const ContainerCompanyForm = () => {
-  const [currentStep, setCurrentStep] = useState(0);
+const ContainerCompanyForm = ({ showHeader = false, initialStep = 0 }: { showHeader?: boolean; initialStep?: number }) => {
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const totalSteps = 9;
 
+  const progressFillColor = (percent: number) =>
+    percent < 34 ? "#86efac" : percent < 67 ? "#22c55e" : "#16a34a";
+  const progressPercent = currentStep === 0 ? 1 : (currentStep / totalSteps) * 100;
+  const uploadFillColor = "#22c55e";
 
 
-  const uploadToCloudinary = async (file: File, folder: string): Promise<{ url: string; publicId: string }> => {
-    const uploadFormData = new FormData();
-    uploadFormData.append('file', file);
-    uploadFormData.append('folder', folder);
-    uploadFormData.append('companyName', formData.companyName || 'unknown');
 
-    const response = await fetch('/api/upload-image', {
-      method: 'POST',
-      body: uploadFormData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error subiendo imagen');
-    }
-
-    const result = await response.json();
-    return { url: result.url, publicId: result.publicId };
-  };
+  // (removido) Función auxiliar uploadToCloudinary no utilizada
 
   // Subida con XHR para poder informar progreso
   const xhrUploadImage = (file: File, folder: string, onProgress: (loaded: number, total: number) => void): Promise<{ url: string; publicId: string }> => {
@@ -128,7 +118,7 @@ const ContainerCompanyForm = () => {
           try {
             const result = JSON.parse(xhr.responseText);
             resolve({ url: result.url, publicId: result.publicId });
-          } catch (e) {
+          } catch {
             reject(new Error('Respuesta inválida del servidor'));
           }
         } else {
@@ -152,28 +142,9 @@ const ContainerCompanyForm = () => {
 
 
 
-  // Función mejorada para procesar imágenes con validación de límite
-  const uploadImageToCloudinary = async (file: File, folder: string): Promise<{ url: string; publicId: string }> => {
-    // Validar tamaño máximo individual (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      throw new Error('El archivo es demasiado grande. Máximo 10MB permitido.');
-    }
+  // (removido) Función de validación de imagen no utilizada para subir a Cloudinary
 
-    // Validar tipo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, GIF, WebP).');
-    }
 
-    try {
-      const image = await uploadToCloudinary(file, folder);
-      return image;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
@@ -184,6 +155,9 @@ const ContainerCompanyForm = () => {
     filesUploaded: number;
   } | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState<{ inProgress: boolean; percent: number }>({ inProgress: false, percent: 0 });
+  const [uploadingModelos, setUploadingModelos] = useState<{ [index: number]: { inProgress: boolean; files: { name: string; percent: number }[] } }>({});
+  const [uploadingProyectos, setUploadingProyectos] = useState<{ [index: number]: { inProgress: boolean; files: { name: string; percent: number }[] } }>({});
+  const [uploadingClientes, setUploadingClientes] = useState<{ [index: number]: { inProgress: boolean; percent: number; name?: string } }>({});
   const [formData, setFormData] = useState<FormData>({
     companyName: '',
     contactPerson: '',
@@ -210,6 +184,8 @@ const ContainerCompanyForm = () => {
     dominioOption: '',
     dominioName: '',
     calculadoraOption: '',
+    metodoCalculo: '',
+    explicacionCalculo: '',
     rangoMetros: '',
     precioCategoria: '',
     precioDifOpcion: '',
@@ -220,7 +196,7 @@ const ContainerCompanyForm = () => {
     formType: 'container',
     // Nuevos campos para tablas
     modelos: [{ nombre: '', categoria: '', superficie: '', dormitorios: '', banios: '', preciobase: '', especiales: '', images: [] }],
-    proyectos: [{ modelo: '', ubicacion: '', anio: '', superficie: '', dormitorios: '', banios: '', images: [] as { url: string; publicId: string }[] }],
+    proyectos: [{ modelo: '', ubicacion: '', anio: '', superficie: '', dormitorios: '', banios: '', descripcion: '', images: [] as { url: string; publicId: string }[] }],
     clientes: [{ nombre: '', ubicacion: '', testimonio: '', image: null }]
   });
 
@@ -229,27 +205,26 @@ const ContainerCompanyForm = () => {
   // Función para actualizar el tracking de tamaño eliminada
 
   const steps = [
-    { title: "Datos de la empresa" },
-    { title: "Ubicación y contacto" },
+    { title: "Datos básicos" },
+    { title: "Contacto y ubicación" },
     { title: "Historia y equipo" },
     { title: "Forma de trabajo" },
-    { title: "Modelos" },
-    { title: "Proyectos" },
-    { title: "Clientes" },
+    { title: "Diseños disponibles" },
+    { title: "Obras realizadas" },
+    { title: "Clientes satisfechos" },
     { title: "Calculadora de precios" },
-    { title: "Mensajes y comunicación de la empresa" }
+    { title: "Información adicional" }
   ];
 
   // Estilos
   const inputStyle = {
     backgroundColor: "transparent",
     border: "1px solid #817D79",
-    color: "#F0EFED",
+    color: "var(--foreground)",
     fontSize: "16px",
   };
-  const labelStyle = { color: "#F0EFED" };
   const descStyle = { color: "#817D79" };
-  const asteriskStyle = { color: "#817D79" };
+
 
 
 
@@ -358,30 +333,60 @@ const ContainerCompanyForm = () => {
     const remaining = 5 - currentImages.length;
     const filesToUpload = Array.from(files).slice(0, remaining);
 
-    const uploaded = [];
-    for (const file of filesToUpload) {
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-      uploadFormData.append('folder', 'modelos');
-      uploadFormData.append('companyName', formData.companyName || 'unknown');
+    // Inicializar estado de progreso
+    setUploadingModelos((prev) => ({
+      ...prev,
+      [modeloIndex]: {
+        inProgress: true,
+        files: filesToUpload.map((f) => ({ name: f.name, percent: 0 })),
+      },
+    }));
 
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: uploadFormData,
-      });
+    const uploaded: { url: string; publicId: string }[] = [];
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error subiendo imagen');
+    try {
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+
+        // Validaciones básicas de tipo y tamaño
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          alert('Tipo de archivo no permitido. Solo JPG, PNG, GIF o WebP.');
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          alert('El archivo es demasiado grande. Máximo 10MB permitido.');
+          continue;
+        }
+
+        const image = await xhrUploadImage(file, 'modelos', (loaded, total) => {
+          const percent = Math.round((loaded / total) * 100);
+          setUploadingModelos((prev) => {
+            const entry = prev[modeloIndex];
+            if (!entry) return prev;
+            const files = [...entry.files];
+            files[i] = { ...files[i], percent };
+            return { ...prev, [modeloIndex]: { ...entry, files } };
+          });
+        });
+
+        uploaded.push(image);
       }
 
-      const { url, publicId } = await response.json();
-      uploaded.push({ url, publicId });
+      const updatedModelos = [...formData.modelos];
+      updatedModelos[modeloIndex].images = [...currentImages, ...uploaded];
+      setFormData((prev) => ({ ...prev, modelos: updatedModelos }));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error subiendo imágenes');
+    } finally {
+      setUploadingModelos((prev) => ({
+        ...prev,
+        [modeloIndex]: {
+          inProgress: false,
+          files: (prev[modeloIndex]?.files || []).map((f) => ({ ...f, percent: 100 })),
+        },
+      }));
     }
-
-    const updatedModelos = [...formData.modelos];
-    updatedModelos[modeloIndex].images = [...currentImages, ...uploaded];
-    setFormData((prev) => ({ ...prev, modelos: updatedModelos }));
   };
 
   const handleRemoveModeloImage = async (modeloIndex: number, imageIndex: number) => {
@@ -399,7 +404,7 @@ const ContainerCompanyForm = () => {
   const addProyectoRow = () => {
     setFormData((prev) => ({
       ...prev,
-      proyectos: [...prev.proyectos, { modelo: "", ubicacion: "", anio: "", superficie: "", dormitorios: "", banios: "", images: [] }],
+      proyectos: [...prev.proyectos, { modelo: "", ubicacion: "", anio: "", superficie: "", dormitorios: "", banios: "", descripcion: "", images: [] }],
     }));
   };
 
@@ -424,30 +429,60 @@ const ContainerCompanyForm = () => {
     const remaining = 5 - currentImages.length;
     const filesToUpload = Array.from(files).slice(0, remaining);
 
-    const uploaded = [];
-    for (const file of filesToUpload) {
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-      uploadFormData.append('folder', 'proyectos');
-      uploadFormData.append('companyName', formData.companyName || 'unknown');
+    // Inicializar estado de progreso
+    setUploadingProyectos((prev) => ({
+      ...prev,
+      [proyectoIndex]: {
+        inProgress: true,
+        files: filesToUpload.map((f) => ({ name: f.name, percent: 0 })),
+      },
+    }));
 
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: uploadFormData,
-      });
+    const uploaded: { url: string; publicId: string }[] = [];
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error subiendo imagen');
+    try {
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+
+        // Validaciones básicas de tipo y tamaño
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          alert('Tipo de archivo no permitido. Solo JPG, PNG, GIF o WebP.');
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          alert('El archivo es demasiado grande. Máximo 10MB permitido.');
+          continue;
+        }
+
+        const image = await xhrUploadImage(file, 'proyectos', (loaded, total) => {
+          const percent = Math.round((loaded / total) * 100);
+          setUploadingProyectos((prev) => {
+            const entry = prev[proyectoIndex];
+            if (!entry) return prev;
+            const files = [...entry.files];
+            files[i] = { ...files[i], percent };
+            return { ...prev, [proyectoIndex]: { ...entry, files } };
+          });
+        });
+
+        uploaded.push(image);
       }
 
-      const { url, publicId } = await response.json();
-      uploaded.push({ url, publicId });
+      const updatedProyectos = [...formData.proyectos];
+      updatedProyectos[proyectoIndex].images = [...currentImages, ...uploaded];
+      setFormData((prev) => ({ ...prev, proyectos: updatedProyectos }));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error subiendo imágenes');
+    } finally {
+      setUploadingProyectos((prev) => ({
+        ...prev,
+        [proyectoIndex]: {
+          inProgress: false,
+          files: (prev[proyectoIndex]?.files || []).map((f) => ({ ...f, percent: 100 })),
+        },
+      }));
     }
-
-    const updatedProyectos = [...formData.proyectos];
-    updatedProyectos[proyectoIndex].images = [...currentImages, ...uploaded];
-    setFormData((prev) => ({ ...prev, proyectos: updatedProyectos }));
   };
 
   const handleRemoveProyectoImage = async (proyectoIndex: number, imageIndex: number) => {
@@ -486,15 +521,49 @@ const ContainerCompanyForm = () => {
   };
 
   const handleClienteImageChange = async (index: number, file: File | null) => {
-    if (file) {
-      try {
-        const image = await uploadImageToCloudinary(file, 'clientes');
-        updateCliente(index, "image", image);
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Error al procesar el archivo');
-      }
-    } else {
+    if (!file) {
       updateCliente(index, "image", null);
+      return;
+    }
+
+    // Validaciones básicas de tipo y tamaño
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Tipo de archivo no permitido. Solo JPG, PNG, GIF o WebP.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('El archivo es demasiado grande. Máximo 10MB permitido.');
+      return;
+    }
+
+    setUploadingClientes((prev) => ({
+      ...prev,
+      [index]: { inProgress: true, percent: 0, name: file.name },
+    }));
+
+    try {
+      const image = await xhrUploadImage(file, 'clientes', (loaded, total) => {
+        const percent = Math.round((loaded / total) * 100);
+        setUploadingClientes((prev) => {
+          const entry = prev[index];
+          if (!entry) return prev;
+          return { ...prev, [index]: { ...entry, percent } };
+        });
+      });
+      updateCliente(index, "image", image);
+      setValidationErrors((prev) => {
+        const copy = { ...prev };
+        delete copy[`cliente_${index}_image`];
+        return copy;
+      });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error subiendo imagen');
+    } finally {
+      setUploadingClientes((prev) => ({
+        ...prev,
+        [index]: { ...(prev[index] || { name: file.name }), inProgress: false, percent: 100 },
+      }));
     }
   };
 
@@ -542,7 +611,7 @@ const ContainerCompanyForm = () => {
         if (!formData.teamSize.trim()) errors.teamSize = 'Llena este campo';
         if (!formData.specialties || formData.specialties.length === 0) errors.specialties = 'Selecciona al menos una opción';
         if (!formData.companyStory.trim()) errors.companyStory = 'Llena este campo';
-        if (!formData.achievements.trim()) errors.achievements = 'Llena este campo';
+        // achievements es opcional
         break;
 
       case 3: // Forma de trabajo
@@ -551,9 +620,11 @@ const ContainerCompanyForm = () => {
         if (!formData.workTime.trim()) errors.workTime = 'Llena este campo';
         if (formData.diferencialCompetitivo.length === 0) errors.diferencialCompetitivo = 'Selecciona al menos una opción';
         if (!formData.ventajas.trim()) errors.ventajas = 'Llena este campo';
-        if (!formData.rangoPrecios.trim()) errors.rangoPrecios = 'Llena este campo';
         if (!formData.proyectosRealizados.trim()) errors.proyectosRealizados = 'Llena este campo';
         if (!formData.dominioOption.trim()) errors.dominioOption = 'Selecciona una opción';
+        if (formData.dominioOption === 'tengo' && !formData.dominioName.trim()) {
+          errors.dominioName = 'Llena este campo';
+        }
         break;
 
       case 4: // Modelos (opcional)
@@ -573,16 +644,16 @@ const ContainerCompanyForm = () => {
         if (formData.proyectos.length > 0) {
           formData.proyectos.forEach((proyecto, index) => {
             // Si cualquier campo del proyecto está lleno, validar todos los campos obligatorios
-            const hasAnyField = proyecto.modelo.trim() || proyecto.ubicacion.trim() ||
+            const hasAnyField = proyecto.ubicacion.trim() ||
               proyecto.superficie.trim() || proyecto.dormitorios.trim() ||
               proyecto.banios.trim() || proyecto.anio.trim();
 
             if (hasAnyField) {
-              if (!proyecto.modelo.trim()) errors[`proyecto_${index}_modelo`] = 'Llena este campo';
               if (!proyecto.ubicacion.trim()) errors[`proyecto_${index}_ubicacion`] = 'Llena este campo';
               if (!proyecto.superficie.trim()) errors[`proyecto_${index}_superficie`] = 'Llena este campo';
               if (!proyecto.dormitorios.trim()) errors[`proyecto_${index}_dormitorios`] = 'Llena este campo';
               if (!proyecto.banios.trim()) errors[`proyecto_${index}_banios`] = 'Llena este campo';
+              if (!proyecto.anio.trim()) errors[`proyecto_${index}_anio`] = 'Llena este campo';
             }
           });
         }
@@ -600,20 +671,18 @@ const ContainerCompanyForm = () => {
         break;
 
       case 7: // Calculadora de precios
-        if (!formData.dominioOption.trim()) errors.dominioOption = 'Selecciona una opción';
-        if (formData.dominioOption === 'si' && !formData.dominioName.trim()) {
-          errors.dominioName = 'Llena este campo';
-        }
         if (!formData.calculadoraOption.trim()) errors.calculadoraOption = 'Selecciona una opción';
-        if (!formData.precioDifOpcion.trim()) errors.precioDifOpcion = 'Selecciona una opción';
-        // Las preguntas 29 y 30 (rangoMetros y precioCategoria) son opcionales
-        // Solo se validan si el usuario eligió 'si' en calculadora Y decidió llenar los campos
+        if (formData.calculadoraOption === 'si' && !formData.metodoCalculo.trim()) {
+          errors.metodoCalculo = 'Selecciona una opción';
+        }
+        if (formData.calculadoraOption === 'si' && !formData.explicacionCalculo.trim()) {
+          errors.explicacionCalculo = 'Llena este campo';
+        }
+        // Removidas las validaciones de campos que no están en el formulario
         break;
 
       case 8: // Mensajes y comunicación
-        if (!formData.frase.trim()) errors.frase = 'Llena este campo';
-        if (!formData.importante.trim()) errors.importante = 'Llena este campo';
-        if (!formData.pitch.trim()) errors.pitch = 'Llena este campo';
+        // Ambas preguntas son opcionales ahora
         break;
     }
 
@@ -679,7 +748,7 @@ const ContainerCompanyForm = () => {
         if (!value || !value.trim()) error = 'Llena este campo';
         break;
       case 'achievements':
-        if (!value || !value.trim()) error = 'Llena este campo';
+        // achievements es opcional
         break;
 
       // Paso 3 - Forma de trabajo
@@ -714,13 +783,19 @@ const ContainerCompanyForm = () => {
         break;
 
       // Paso 5 - Proyectos (campos dinámicos)
-      case 'proyecto_modelo':
-        if (!value || !value.trim()) error = 'Llena este campo';
-        break;
       case 'proyecto_ubicacion':
         if (!value || !value.trim()) error = 'Llena este campo';
         break;
       case 'proyecto_anio':
+        if (!value || !value.trim()) error = 'Llena este campo';
+        break;
+      case 'proyecto_superficie':
+        if (!value || !value.trim()) error = 'Llena este campo';
+        break;
+      case 'proyecto_dormitorios':
+        if (!value || !value.trim()) error = 'Llena este campo';
+        break;
+      case 'proyecto_banios':
         if (!value || !value.trim()) error = 'Llena este campo';
         break;
 
@@ -740,12 +815,22 @@ const ContainerCompanyForm = () => {
         if (!value || !value.trim()) error = 'Selecciona una opción';
         break;
       case 'dominioName':
-        if (formData.dominioOption === 'si' && (!value || !value.trim())) {
+        if (formData.dominioOption === 'tengo' && (!value || !value.trim())) {
           error = 'Llena este campo';
         }
         break;
       case 'calculadoraOption':
         if (!value || !value.trim()) error = 'Selecciona una opción';
+        break;
+      case 'metodoCalculo':
+        if (formData.calculadoraOption === 'si' && (!value || !value.trim())) {
+          error = 'Selecciona una opción';
+        }
+        break;
+      case 'explicacionCalculo':
+        if (formData.calculadoraOption === 'si' && (!value || !value.trim())) {
+          error = 'Llena este campo';
+        }
         break;
       case 'rangoMetros':
         if (formData.calculadoraOption === 'si' && (!value || !value.trim())) {
@@ -757,16 +842,24 @@ const ContainerCompanyForm = () => {
           error = 'Llena este campo';
         }
         break;
+      case 'precioDifOpcion':
+        if (formData.calculadoraOption === 'si' && (!value || !value.trim())) {
+          error = 'Selecciona una opción';
+        }
+        break;
 
       // Paso 8 - Mensajes y comunicación
       case 'frase':
-        if (!value || !value.trim()) error = 'Llena este campo';
+        // frase es opcional
         break;
       case 'importante':
-        if (!value || !value.trim()) error = 'Llena este campo';
+        // importante es opcional
         break;
       case 'pitch':
-        if (!value || !value.trim()) error = 'Llena este campo';
+        // pitch es opcional
+        break;
+      case 'pitch':
+        // pitch es opcional
         break;
     }
 
@@ -810,7 +903,7 @@ const ContainerCompanyForm = () => {
         fields.push('foundedYear', 'teamSize', 'specialties', 'companyStory', 'achievements');
         break;
       case 3:
-        fields.push('workStyle', 'workTime', 'diferencialCompetitivo', 'ventajas', 'rangoPrecios', 'proyectosRealizados', 'dominioOption');
+        fields.push('workStyle', 'workTime', 'diferencialCompetitivo', 'ventajas', 'proyectosRealizados', 'dominioOption');
         break;
       case 4: // Modelos
         fields.push('modelos');
@@ -823,7 +916,7 @@ const ContainerCompanyForm = () => {
         fields.push('proyectos');
         // Agregar campos dinámicos de proyectos
         formData.proyectos.forEach((_, index) => {
-          fields.push(`proyecto_${index}_modelo`, `proyecto_${index}_ubicacion`, `proyecto_${index}_superficie`, `proyecto_${index}_dormitorios`, `proyecto_${index}_banios`);
+          fields.push(`proyecto_${index}_ubicacion`, `proyecto_${index}_superficie`, `proyecto_${index}_dormitorios`, `proyecto_${index}_banios`, `proyecto_${index}_anio`);
         });
         break;
       case 6: // Clientes
@@ -834,7 +927,7 @@ const ContainerCompanyForm = () => {
         });
         break;
       case 7:
-        fields.push('dominioOption', 'dominioName', 'calculadoraOption', 'precioDifOpcion');
+        fields.push('calculadoraOption', 'precioDifOpcion');
         break;
       case 8:
         fields.push('frase', 'importante', 'pitch');
@@ -907,8 +1000,12 @@ const ContainerCompanyForm = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    // Solo procesar el envío si estamos realmente en el último paso
+    if (currentStep !== totalSteps - 1) {
+      console.log('Envío cancelado: no estamos en el último paso');
+      return;
+    }
 
     // Marcar todos los campos del paso actual como tocados antes de validar
     const stepFields = getFieldsForStep(currentStep);
@@ -933,7 +1030,8 @@ const ContainerCompanyForm = () => {
       return;
     }
 
-    const submitButton = e.currentTarget.querySelector<HTMLButtonElement>('button[type="submit"]');
+    // Buscar el botón de envío para cambiar su estado
+    const submitButton = document.querySelector('.btn-secondary') as HTMLButtonElement;
     const originalText = submitButton?.textContent;
     if (submitButton) {
       submitButton.disabled = true;
@@ -971,6 +1069,8 @@ const ContainerCompanyForm = () => {
       formDataToSend.append('dominioOption', formData.dominioOption);
       formDataToSend.append('dominioName', formData.dominioName || '');
       formDataToSend.append('calculadoraOption', formData.calculadoraOption);
+      formDataToSend.append('metodoCalculo', formData.metodoCalculo || '');
+      formDataToSend.append('explicacionCalculo', formData.explicacionCalculo || '');
       formDataToSend.append('rangoMetros', formData.rangoMetros || '');
       formDataToSend.append('precioCategoria', formData.precioCategoria || '');
       formDataToSend.append('precioDifOpcion', formData.precioDifOpcion);
@@ -1047,7 +1147,7 @@ const ContainerCompanyForm = () => {
   const ErrorMessage = ({ error }: { error: string | null | undefined }) => {
     if (!error) return null;
     return (
-      <div className="error-message text-red-400 text-xs mt-1 font-medium">
+      <div className="form-error">
         {error}
       </div>
     );
@@ -1059,9 +1159,9 @@ const ContainerCompanyForm = () => {
       case 0:
         return (
           <div className="space-y-6">
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                1. Nombre de la empresa<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                1. Nombre de la empresa<span className="text-gray-400 ml-1">*</span>
               </label>
               <input
                 type="text"
@@ -1069,17 +1169,16 @@ const ContainerCompanyForm = () => {
                 value={formData.companyName}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('companyName', e.target.value)}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
+                placeholder="Contenedores del Uruguay"
+                className={`form-input ${validationErrors.companyName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.companyName} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                2. Persona de contacto principal<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                2. Persona de contacto principal<span className="text-gray-400 ml-1">*</span>
               </label>
               <input
                 type="text"
@@ -1087,17 +1186,16 @@ const ContainerCompanyForm = () => {
                 value={formData.contactPerson}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('contactPerson', e.target.value)}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
+                placeholder="María Pérez"
+                className={`form-input ${validationErrors.contactPerson ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.contactPerson} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                3. Teléfono de contacto<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                3. Teléfono de contacto<span className="text-gray-400 ml-1">*</span>
               </label>
               <input
                 type="tel"
@@ -1105,17 +1203,16 @@ const ContainerCompanyForm = () => {
                 value={formData.phone}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('phone', e.target.value)}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
+                placeholder="099 123 456"
+                className={`form-input ${validationErrors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.phone} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                4. Email de contacto<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                4. Email de contacto<span className="text-gray-400 ml-1">*</span>
               </label>
               <input
                 type="email"
@@ -1123,17 +1220,16 @@ const ContainerCompanyForm = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('email', e.target.value)}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
+                placeholder="contacto@tuempresa.com"
+                className={`form-input ${validationErrors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.email} />
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                5. Suba el logo de la empresa<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                5. Suba el logo de la empresa<span className="text-gray-400 ml-1">*</span>
               </label>
 
               {/* Preview si hay logo */}
@@ -1152,7 +1248,7 @@ const ContainerCompanyForm = () => {
                     <button
                       type="button"
                       onClick={handleRemoveLogoImage}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="btn-icon btn-destructive absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       ×
                     </button>
@@ -1163,8 +1259,8 @@ const ContainerCompanyForm = () => {
               {/* Botón de subida */}
               {!formData.logo && (
                 <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center ${validationErrors.logo ? 'border-red-400' : ''}`}
-                  style={{ borderColor: validationErrors.logo ? '#f87171' : '#817D79' }}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center upload-hover ${validationErrors.logo ? 'border-red-600' : ''}`}
+                  style={{ borderColor: validationErrors.logo ? '#dc2626' : '#817D79' }}
                 >
                   <input
                     type="file"
@@ -1177,18 +1273,25 @@ const ContainerCompanyForm = () => {
                   <label htmlFor="logo-upload" className={`cursor-pointer group ${uploadingLogo.inProgress ? 'opacity-60 pointer-events-none' : ''}`}>
                     <Upload
                       size={24}
-                      className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                      className="mx-auto mb-2 text-gray-600 upload-icon"
                     />
-                    <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
+                    <div className="text-sm text-gray-600 upload-text">
                       Subir logo
                     </div>
                   </label>
 
                   {uploadingLogo.inProgress && (
                     <div className="mt-4 text-left">
-                      <div className="text-xs text-[#817D79]">Subiendo logo… {uploadingLogo.percent}%</div>
-                      <div className="h-1.5 rounded bg-[#2a2a2a] mt-2">
-                        <div className="h-1.5 rounded bg-[#817D79]" style={{ width: `${uploadingLogo.percent}%` }} />
+                      <div className="text-xs" style={descStyle}>Subiendo logo… {uploadingLogo.percent}%</div>
+                      <div className="h-1.5 rounded-md bg-[#e5e7eb] mt-2">
+                        <div
+                          className="h-1.5 rounded-md"
+                          style={{
+                            backgroundColor: uploadFillColor,
+                            width: `${uploadingLogo.percent}%`,
+                            transition: "background-color 200ms ease, width 300ms ease",
+                          }}
+                        />
                       </div>
                     </div>
                   )}
@@ -1198,18 +1301,18 @@ const ContainerCompanyForm = () => {
               <ErrorMessage error={validationErrors.logo} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                6. ¿Cuáles son los colores principales de su marca?<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                6. ¿Cuáles son los colores principales de su marca?<span className="text-gray-400 ml-1">*</span>
               </label>
               <textarea
                 name="brandColors"
                 value={formData.brandColors}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('brandColors')}
                 onBlur={(e) => handleFieldValidation('brandColors', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.brandColors ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="Azul, naranja, blanco"
+                className={`form-textarea ${validationErrors.brandColors ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.brandColors} />
@@ -1220,90 +1323,87 @@ const ContainerCompanyForm = () => {
       case 1:
         return (
           <div className="space-y-6">
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                7. Dirección de la empresa<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                7. Dirección de la empresa<span className="text-gray-400 ml-1">*</span>
               </label>
               <textarea
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('address', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.address ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="Av. Italia 1234, Montevideo"
+                className={`form-textarea ${validationErrors.address ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.address} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                8. ¿Cuáles son sus horarios de atención?<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                8. ¿Cuáles son sus horarios de atención?<span className="text-gray-400 ml-1">*</span>
               </label>
-              <p className="text-sm mb-3" style={descStyle}>Ejemplo: Lunes a viernes 9:00 a 18:00, Sábados 9:00 a 12:00</p>
               <textarea
                 name="businessHours"
                 value={formData.businessHours}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('businessHours')}
                 onBlur={(e) => handleFieldValidation('businessHours', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.businessHours ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="Lunes a viernes 9-18hs"
+                className={`form-textarea ${validationErrors.businessHours ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.businessHours} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                9. ¿Qué redes sociales tienen?<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                9. Links de redes sociales<span className="text-gray-400 ml-1">*</span>
               </label>
-              <p className="text-sm mb-3" style={descStyle}>Compartan los links o nombres de sus perfiles de redes sociales (Facebook, Instagram, etc.)</p>
+              <p className="form-description">Instagram, Facebook, TikTok, LinkedIn</p>
               <textarea
                 name="socialMedia"
                 value={formData.socialMedia}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('socialMedia', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.socialMedia ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="https://instagram.com/tuempresa
+https://facebook.com/tuempresa"
+                className={`form-textarea ${validationErrors.socialMedia ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.socialMedia} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                10. Número de WhatsApp para contacto<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                10. Número de WhatsApp para contacto<span className="text-gray-400 ml-1">*</span>
               </label>
-              <p className="text-sm mb-3" style={descStyle}>Este será el número principal que aparecerá en la web para que los clientes puedan contactarlos</p>
+              <p className="form-description">Este número aparecerá visible en tu web con el botón de WhatsApp</p>
               <input
                 type="text"
                 name="whatsappNumber"
                 value={formData.whatsappNumber}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('whatsappNumber', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.whatsappNumber ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="099 456 789"
+                className={`form-input ${validationErrors.whatsappNumber ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.whatsappNumber} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                11. ¿En qué ciudades o zonas de Uruguay trabajan?<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                11. ¿En qué zonas de Uruguay trabajan?<span className="text-gray-400 ml-1">*</span>
               </label>
               <textarea
                 name="workAreas"
                 value={formData.workAreas}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('workAreas')}
                 onBlur={(e) => handleFieldValidation('workAreas', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.workAreas ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="Montevideo, Canelones"
+                className={`form-textarea ${validationErrors.workAreas ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.workAreas} />
@@ -1314,9 +1414,9 @@ const ContainerCompanyForm = () => {
       case 2:
         return (
           <div className="space-y-6">
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                12. ¿En qué año comenzó la empresa?<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                12. Año de inicio<span className="text-gray-400 ml-1">*</span>
               </label>
               <input
                 type="text"
@@ -1324,26 +1424,25 @@ const ContainerCompanyForm = () => {
                 value={formData.foundedYear}
                 onChange={handleInputChange}
                 onBlur={(e) => handleFieldValidation('foundedYear', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.foundedYear ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="2015"
+                className={`form-input ${validationErrors.foundedYear ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.foundedYear} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                13. ¿Cuántas personas conforman el equipo actual?<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                13. ¿Cuántas personas conforman el equipo actual?<span className="text-gray-400 ml-1">*</span>
               </label>
               <div className="space-y-3">
                 {[
-                  { teamSize: "1-2", label: "1-2 personas" },
-                  { teamSize: "3-5", label: "3-5 personas" },
-                  { teamSize: "6-10", label: "6-10 personas" },
-                  { teamSize: "+10", label: "Más de 10 personas" }
+                  { teamSize: "1-2", label: "1-2" },
+                  { teamSize: "3-5", label: "3-5" },
+                  { teamSize: "6-10", label: "6-10" },
+                  { teamSize: "+10", label: "Más de 10" }
                 ].map((option) => (
-                  <label key={option.teamSize} className="flex items-center space-x-3 cursor-pointer group">
+                  <label key={option.teamSize} className="form-radio-label">
                     <input
                       type="radio"
                       name="teamSize"
@@ -1353,14 +1452,10 @@ const ContainerCompanyForm = () => {
                         handleInputChange(e);
                         handleFieldValidation('calculadoraOption', e.target.value);
                       }}
-                      className={`w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300 ${validationErrors.teamSize ? 'border-red-400' : ''}`}
-                      style={{
-                        borderColor: "#F0EFED",
-                        accentColor: "#817D79"
-                      }}
+                      className={`form-radio ${validationErrors.teamSize ? 'border-destructive' : ''}`}
                       required
                     />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
+                    <span className="form-radio-text">
                       {option.label}
                     </span>
                   </label>
@@ -1369,38 +1464,34 @@ const ContainerCompanyForm = () => {
               <ErrorMessage error={validationErrors.teamSize} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                14. ¿Cuál es su especialidad principal?<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                14. ¿Cuál es su especialidad principal?<span className="text-gray-400 ml-1">*</span>
               </label>
-              <p className="text-sm mb-4" style={descStyle}>
-                Puedes seleccionar múltiples opciones
+              <p className="form-description">
+                Seleccioná todas las que apliquen
               </p>
               <div className="space-y-3">
                 {[
-                  { specialties: "arquitectura-diseño", label: "Arquitectura y diseño" },
+                  { specialties: "diseño-arquitectura", label: "Diseño y arquitectura" },
                   { specialties: "construccion-montaje", label: "Construcción y montaje" },
-                  { specialties: "diseño-interiores", label: "Diseño de interiores" },
-                  { specialties: "gestion-proyectos", label: "Gestión de proyectos" },
+                  { specialties: "terminaciones-interiores", label: "Terminaciones e interiores" },
                   { specialties: "asesoramiento-tecnico", label: "Asesoramiento técnico" },
-                  { specialties: "ingenieria-estructural", label: "Ingeniería estructural" },
-                  { specialties: "decoracion-ambientacion", label: "Decoración y ambientación" }
+                  { specialties: "gestion-proyectos", label: "Gestión de proyectos" },
+                  { specialties: "ampliaciones-reformas", label: "Ampliaciones y reformas" },
+                  { specialties: "transporte-logistica", label: "Transporte y logística" }
                 ].map((option) => (
-                  <label key={option.specialties} className="flex items-center space-x-3 cursor-pointer group">
+                  <label key={option.specialties} className="form-checkbox-label">
                     <input
                       type="checkbox"
                       name="specialties"
                       value={option.specialties}
                       checked={formData.specialties.includes(option.specialties)}
                       onChange={() => handleCheckboxChange("specialties", option.specialties)}
-                      className={`w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300 rounded ${validationErrors.specialties ? 'border-red-400' : ''}`}
-                      style={{
-                        borderColor: "#F0EFED",
-                        accentColor: "#817D79"
-                      }}
+                      className={`form-checkbox ${validationErrors.specialties ? 'border-destructive' : ''}`}
                       required
                     />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
+                    <span className="form-checkbox-text">
                       {option.label}
                     </span>
                   </label>
@@ -1416,39 +1507,37 @@ const ContainerCompanyForm = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                15. Cuéntenos sobre su empresa: historia, motivación y valores<span style={asteriskStyle}>*</span>
+            <div className="form-field">
+              <label className="form-label text-lg font-bold">
+                15. Historia de la empresa<span className="text-gray-400 ml-1">*</span>
               </label>
-              <p className="text-sm mb-3" style={descStyle}>¿Cómo comenzaron? ¿Por qué eligieron containers? ¿Qué los motiva?
-                ¿Cuáles son sus valores? ¿Experiencias importantes que los marcaron? ¿Cuál es su misión como empresa?</p>
+              <p className="form-description">¿Cómo comenzaron? ¿Por qué containers? ¿Qué los motiva?</p>
               <textarea
                 name="companyStory"
                 value={formData.companyStory}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('companyStory')}
                 onBlur={(e) => handleFieldValidation('companyStory', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.companyStory ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                placeholder="Contanos tu historia en unas líneas"
+                className={`form-textarea ${validationErrors.companyStory ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.companyStory} />
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                16. ¿Tienen algún logro o hito importante que les gustaría destacar?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                16. Logros destacados (opcional)
               </label>
-              <p className="text-sm mb-3" style={descStyle}>Premios, certificaciones, proyectos especiales, años en el mercado, etc.</p>
-              <textarea
+              <input
+                type="text"
                 name="achievements"
                 value={formData.achievements}
                 onChange={handleInputChange}
+                onFocus={() => markFieldAsTouched('achievements')}
                 onBlur={(e) => handleFieldValidation('achievements', e.target.value)}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.achievements ? 'border-red-400' : ''}`}
-                style={inputStyle}
-                required
+                placeholder="Más de 50 casas entregadas"
+                className={`form-input ${validationErrors.achievements ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               />
               <ErrorMessage error={validationErrors.achievements} />
             </div>
@@ -1459,8 +1548,8 @@ const ContainerCompanyForm = () => {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                17. ¿Cómo trabajan principalmente?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                17. ¿Cómo trabajan principalmente?<span className="text-gray-400 ml-1">*</span>
               </label>
               <div className="space-y-3">
                 {[
@@ -1478,14 +1567,14 @@ const ContainerCompanyForm = () => {
                         handleInputChange(e);
                         handleFieldValidation('calculadoraOption', e.target.value);
                       }}
-                      className={`w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300 ${validationErrors.workStyle ? 'border-red-400' : ''}`}
+                      className={`form-radio ${validationErrors.workStyle ? 'border-red-400' : ''}`}
                       style={{
-                        borderColor: validationErrors.workStyle ? "#f87171" : "#F0EFED",
-                        accentColor: "#817D79"
+                        borderColor: validationErrors.workStyle ? "#dc2626" : "#9ca3af",
+                        accentColor: "#6b7280"
                       }}
                       required
                     />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
+                    <span className="text-sm group-hover:opacity-80 transition-opacity">
                       {option.label}
                     </span>
                   </label>
@@ -1495,27 +1584,28 @@ const ContainerCompanyForm = () => {
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                18. ¿En cuántos días entregan aproximadamente un proyecto?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                18. Tiempo de entrega aproximado<span className="text-gray-400 ml-1">*</span>
               </label>
-              <textarea
+              <input
+                type="text"
                 name="workTime"
                 value={formData.workTime}
                 onChange={handleInputChange}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.workTime ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                onBlur={(e) => handleFieldValidation('workTime', e.target.value)}
+                placeholder="3-6 meses"
+                className={`form-input ${validationErrors.workTime ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.workTime} />
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                19. ¿Cuál consideran que es su principal diferencial competitivo?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                19. ¿Cuál consideran que es su principal diferencial competitivo?<span className="text-gray-400 ml-1">*</span>
               </label>
               <p className="text-sm mb-4" style={descStyle}>
-                Puedes seleccionar múltiples opciones
+                Seleccioná todas las que apliquen
               </p>
               <div className="space-y-3">
                 {[
@@ -1526,7 +1616,8 @@ const ContainerCompanyForm = () => {
                   { diferencialCompetitivo: "servicio-personalizado", label: "Servicio personalizado" },
                   { diferencialCompetitivo: "experiencia-trayectoria", label: "Experiencia y trayectoria" },
                   { diferencialCompetitivo: "garantia-extendida", label: "Garantías extendidas" },
-                  { diferencialCompetitivo: "atencion-postventa", label: "Atención post-venta" }
+                  { diferencialCompetitivo: "atencion-postventa", label: "Atención post-venta" },
+                  { diferencialCompetitivo: "montaje-profesional", label: "Montaje profesional" }
                 ].map((option) => (
                   <label key={option.diferencialCompetitivo} className="flex items-center space-x-3 cursor-pointer group">
                     <input
@@ -1537,12 +1628,12 @@ const ContainerCompanyForm = () => {
                       onChange={() => handleCheckboxChange("diferencialCompetitivo", option.diferencialCompetitivo)}
                       className={`w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300 rounded ${validationErrors.diferencialCompetitivo ? 'border-red-400' : ''}`}
                       style={{
-                        borderColor: validationErrors.diferencialCompetitivo ? "#f87171" : "#F0EFED",
+                        borderColor: validationErrors.diferencialCompetitivo ? "#dc2626" : "#817D79",
                         accentColor: "#817D79"
                       }}
                       required
                     />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
+                    <span className="text-sm group-hover:opacity-80 transition-opacity">
                       {option.label}
                     </span>
                   </label>
@@ -1559,50 +1650,34 @@ const ContainerCompanyForm = () => {
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                20. ¿Qué ventajas consideran que tienen las casas container sobre la construcción tradicional?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                20. Principales ventajas de las casas container<span className="text-gray-400 ml-1">*</span>
+                <p className="text-sm font-medium mb-3" style={descStyle}>Según tu experiencia, ¿qué beneficios destacarías?</p>
               </label>
-              <p className="text-sm mb-3" style={descStyle}>Cuéntenos qué beneficios ven ustedes en este tipo de construcción desde su experiencia</p>
               <textarea
                 name="ventajas"
                 value={formData.ventajas}
                 onChange={handleInputChange}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.ventajas ? 'border-red-400' : ''}`}
-                style={inputStyle}
+                onFocus={() => markFieldAsTouched('ventajas')}
+                onBlur={(e) => handleFieldValidation('ventajas', e.target.value)}
+                placeholder="Construcción más rápida, menor costo"
+                className={`form-textarea ${validationErrors.ventajas ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 required
               />
               <ErrorMessage error={validationErrors.ventajas} />
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                21. Rango de precios por m² aproximado<span style={asteriskStyle}>*</span>
-              </label>
-              <p className="text-sm mb-3" style={descStyle}>Ejemplo: USD 800-1200 por m²</p>
-              <textarea
-                name="rangoPrecios"
-                value={formData.rangoPrecios}
-                onChange={handleInputChange}
-                placeholder="Tu respuesta"
-                className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors.rangoPrecios ? 'border-red-400' : ''}`}
-                style={inputStyle}
-                required
-              />
-              <ErrorMessage error={validationErrors.rangoPrecios} />
-            </div>
-
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                22. ¿Cuántos proyectos han realizado aproximadamente?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                21. ¿Cuántas casas han entregado?<span className="text-gray-400 ml-1">*</span>
               </label>
               <div className="space-y-3">
                 {[
-                  { proyectosRealizados: "1-10", label: "1-10 proyectos" },
-                  { proyectosRealizados: "11-25", label: "11-25 proyectos" },
-                  { proyectosRealizados: "26-50", label: "26-50 proyectos" },
-                  { proyectosRealizados: "51-100", label: "51-100 proyectos" },
-                  { proyectosRealizados: "+100", label: "Más de 100 proyectos" }
+                  { proyectosRealizados: "1-10", label: "1-10" },
+                  { proyectosRealizados: "11-25", label: "11-25" },
+                  { proyectosRealizados: "26-50", label: "26-50" },
+                  { proyectosRealizados: "51-100", label: "51-100" },
+                  { proyectosRealizados: "+100", label: "Más de 100" }
                 ].map((option) => (
                   <label key={option.proyectosRealizados} className="flex items-center space-x-3 cursor-pointer group">
                     <input
@@ -1618,7 +1693,7 @@ const ContainerCompanyForm = () => {
                       }}
                       required
                     />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
+                    <span className="text-sm group-hover:opacity-80 transition-opacity">
                       {option.label}
                     </span>
                   </label>
@@ -1628,14 +1703,13 @@ const ContainerCompanyForm = () => {
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                23. ¿Ya tienen dominio web?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                22. ¿Tienen dominio web?<span className="text-gray-400 ml-1">*</span>
               </label>
               <div className="space-y-3">
                 {[
-                  { dominioOption: "tengo", label: "Tengo dominio (especificar en la siguiente pregunta)" },
-                  { dominioOption: "no-tengo", label: "No tengo dominio y necesito ayuda para elegir y comprarlo" },
-                  { dominioOption: "idea", label: "Tengo una idea pero no lo compré (especificar en la siguiente pregunta)" }
+                  { dominioOption: "tengo", label: "Sí, ya tengo dominio" },
+                  { dominioOption: "no-tengo", label: "No, necesito orientación para comprarlo" }
                 ].map((option) => (
                   <label key={option.dominioOption} className="flex items-center space-x-3 cursor-pointer group">
                     <input
@@ -1644,14 +1718,14 @@ const ContainerCompanyForm = () => {
                       value={option.dominioOption}
                       checked={formData.dominioOption === option.dominioOption}
                       onChange={handleInputChange}
-                      className="w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300"
+                      className="w-4 h-4 text-[var(--foreground)] bg-transparent border-2 focus:ring-2 focus:ring-gray-300"
                       style={{
                         borderColor: "#F0EFED",
                         accentColor: "#817D79"
                       }}
                       required
                     />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
+                    <span className="text-sm group-hover:opacity-80 transition-opacity">
                       {option.label}
                     </span>
                   </label>
@@ -1660,45 +1734,46 @@ const ContainerCompanyForm = () => {
               <ErrorMessage error={validationErrors.dominioOption} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                24. Si respondió &quot;Sí&quot; o &quot;Tengo una idea&quot;, especifique el dominio
-              </label>
-              <p className="text-sm mb-3" style={descStyle}>Ejemplo: www.miempresacontainers.com.uy</p>
-              <textarea
-                name="dominioName"
-                value={formData.dominioName}
-                onChange={handleInputChange}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
-              />
-            </div>
+            {formData.dominioOption === 'tengo' && (
+              <div>
+                <label className="form-label text-lg font-bold">
+                  23. ¿Cuál es tu dominio?
+                </label>
+                <textarea
+                  name="dominioName"
+                  value={formData.dominioName}
+                  onChange={handleInputChange}
+                  placeholder="www.tuempresa.com.uy"
+                  className="form-textarea"
+                />
+              </div>
+            )}
           </div>
         );
 
-      case 4:
+      case 4: {
+        const domainExtra = formData.dominioOption === 'tengo' ? 1 : 0;
+        const disenosNumber = 23 + domainExtra;
         return (
           <div className="space-y-8">
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                25. Si tiene modelos predefinidos
+              <label className="form-label text-lg font-bold">
+                {disenosNumber}. Diseños disponibles (o &quot;Catálogo&quot;)
               </label>
               <p className="text-sm mb-4" style={descStyle}>
-                Detalle cada modelo con su descripción, precio aproximado e imagen representativa
+                Si ofrecés diseños de catálogo con precios establecidos, completá esta sección (opcional)
               </p>
 
               <div className="space-y-4">
                 {formData.modelos.map((modelo, index) => (
-                  <div key={index} className="p-4 rounded-lg" style={{ border: '1px solid #817D79', backgroundColor: '#1a1a1a' }}>
+                  <div key={index} className="p-4 rounded-lg bg-[#f7f5f3] border border-gray-300">
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium" style={labelStyle}>Modelo {index + 1}</h4>
+                      <h4 className="text-sm font-medium text-gray-800 underline">Diseño {index + 1}</h4>
                       {formData.modelos.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeModeloRow(index)}
-                          className="p-1 rounded hover:bg-red-600/20"
-                          style={{ color: '#ef4444' }}
+                          className="btn-icon btn-ghost hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -1707,107 +1782,88 @@ const ContainerCompanyForm = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>Nombre del modelo</label>
+                        <label className="block text-sm font-semibold mb-2 text-gray-800">Nombre del diseño</label>
                         <input
                           type="text"
                           value={modelo.nombre}
                           onChange={(e) => updateModelo(index, 'nombre', e.target.value)}
-                          placeholder="Ejemplo: Compacta"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`modelo_${index}_nombre`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          placeholder="Compacta"
+                          className={`form-input ${validationErrors[`modelo_${index}_nombre`] ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         />
                         <ErrorMessage error={validationErrors[`modelo_${index}_nombre`]} />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>Categoría</label>
-                        <input
-                          type="text"
-                          value={modelo.categoria}
-                          onChange={(e) => updateModelo(index, 'categoria', e.target.value)}
-                          placeholder="Ejemplo: Básico"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`modelo_${index}_categoria`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
-                        />
-                        <ErrorMessage error={validationErrors[`modelo_${index}_categoria`]} />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>Superficie (m²)</label>
+                        <label className="block text-sm font-semibold mb-2 text-gray-800">Metros cuadrados</label>
                         <input
                           type="text"
                           value={modelo.superficie}
                           onChange={(e) => updateModelo(index, 'superficie', e.target.value)}
-                          placeholder="Ejemplo: 50 (m²)"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`modelo_${index}_superficie`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          placeholder="50 m²"
+                          className={`form-input ${validationErrors[`modelo_${index}_superficie`] ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         />
                         <ErrorMessage error={validationErrors[`modelo_${index}_superficie`]} />
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>Dormitorios</label>
+                      <div>
+                        <label className="block text-sm font-semibold mb-2 text-gray-800">Dormitorios</label>
                         <input
                           type="text"
                           value={modelo.dormitorios}
                           onChange={(e) => updateModelo(index, 'dormitorios', e.target.value)}
                           onBlur={(e) => handleFieldValidation(`modelo_${index}_dormitorios`, e.target.value)}
-                          placeholder="Ejemplo: 2"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`modelo_${index}_dormitorios`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          placeholder="2"
+                          className={`form-input ${validationErrors[`modelo_${index}_dormitorios`] ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         />
                         <ErrorMessage error={validationErrors[`modelo_${index}_dormitorios`]} />
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>Baños</label>
+                      <div>
+                        <label className="block text-sm font-semibold mb-2 text-gray-800">Baños</label>
                         <input
                           type="text"
                           value={modelo.banios}
                           onChange={(e) => updateModelo(index, 'banios', e.target.value)}
                           onBlur={(e) => handleFieldValidation(`modelo_${index}_banios`, e.target.value)}
-                          placeholder="Ejemplo: 1"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`modelo_${index}_banios`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          placeholder="1"
+                          className={`form-input ${validationErrors[`modelo_${index}_banios`] ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         />
                         <ErrorMessage error={validationErrors[`modelo_${index}_banios`]} />
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>Precio base (m²)</label>
+                        <label className="block text-sm font-semibold mb-2 text-gray-800">Precio base (opcional)</label>
                         <input
                           type="text"
                           value={modelo.preciobase}
                           onChange={(e) => updateModelo(index, 'preciobase', e.target.value)}
-                          placeholder="Ejemplo: USD 750 (m²)"
-                          className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                          style={inputStyle}
+                          placeholder="USD 750 por m² / USD 30.000 total"
+                          className="form-input"
                         />
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold mb-2" style={labelStyle}>Características especiales</label>
+                        <label className="block text-sm font-semibold mb-2 text-gray-800">Detalles destacados (opcional)</label>
                         <textarea
                           value={modelo.especiales}
                           onChange={(e) => updateModelo(index, 'especiales', e.target.value)}
-                          placeholder="Ejemplo: Terraza, aislación"
-                          className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                          style={inputStyle}
+                          placeholder="Terraza, aislación térmica"
+                          className="form-textarea"
                         />
                       </div>
 
                       <div className="md:col-span-2">
                         <div className="flex items-center justify-between mb-2">
-                          <label className="block text-sm font-semibold" style={labelStyle}>
-                            Imágenes del modelo
+                          <label className="block text-sm font-semibold text-gray-800">
+                            Fotos del diseño
                           </label>
                           <span className="text-sm text-[#817D79]">
                             {modelo.images?.length || 0}/5
                           </span>
                         </div>
 
-                        <p className="text-sm text-[#817D79] mb-3">
-                          Si es posible, subí 4 fotos
+                        <p className="text-xs mb-2" style={descStyle}>
+                          Subí 4 fotos
                         </p>
 
                         {/* Grid de imágenes subidas */}
@@ -1820,17 +1876,17 @@ const ContainerCompanyForm = () => {
                                   alt={`Imagen ${imgIndex + 1}`}
                                   fill
                                   sizes="(min-width: 768px) 25vw, 50vw"
-                                  className="object-cover rounded"
+                                  className="object-cover rounded-md"
                                   unoptimized
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveModeloImage(index, imgIndex)}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="btn-icon btn-destructive absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                   ×
                                 </button>
-                                <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                                <div className="absolute bottom-1 left-1 bg-white/80 text-[#4B5563] text-xs px-1.5 py-0.5 rounded-md">
                                   {imgIndex + 1}
                                 </div>
                               </div>
@@ -1840,7 +1896,7 @@ const ContainerCompanyForm = () => {
 
                         {/* Botón de subida */}
                         {(!modelo.images || modelo.images.length < 5) && (
-                          <div className="border-2 border-dashed rounded p-6 text-center" style={{ borderColor: '#817D79' }}>
+                          <div className="border-2 border-dashed rounded-lg p-6 text-center upload-hover" style={{ borderColor: '#817D79' }}>
                             <input
                               type="file"
                               accept=".png,.jpg,.jpeg"
@@ -1849,18 +1905,37 @@ const ContainerCompanyForm = () => {
                               className="hidden"
                               id={`modelo-images-${index}`}
                             />
-                            <label htmlFor={`modelo-images-${index}`} className="cursor-pointer group">
+                            <label htmlFor={`modelo-images-${index}`} className={`cursor-pointer group ${uploadingModelos[index]?.inProgress ? 'opacity-60 pointer-events-none' : ''}`}>
                               <Upload
                                 size={24}
-                                className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                                className="mx-auto mb-2 text-[#817D79] upload-icon"
                               />
-                              <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
+                              <div className="text-sm text-[#817D79] upload-text">
                                 {modelo.images?.length > 0 ? 'Agregar más fotos' : 'Subir fotos'}
                               </div>
                               <div className="text-xs text-[#817D79]/70 mt-1">
                                 Podés seleccionar varias a la vez
                               </div>
                             </label>
+                            {uploadingModelos[index]?.inProgress && uploadingModelos[index]?.files?.length > 0 && (
+                              <div className="mt-4 text-left space-y-2">
+                                {uploadingModelos[index].files.map((f, fi) => (
+                                  <div key={fi}>
+                                    <div className="text-xs" style={descStyle}>{f.name}… {f.percent}%</div>
+                                    <div className="h-1.5 rounded-md bg-[#e5e7eb] mt-1">
+                                      <div
+                                        className="h-1.5 rounded-md"
+                                        style={{
+                                          backgroundColor: uploadFillColor,
+                                          width: `${f.percent}%`,
+                                          transition: "background-color 200ms ease, width 300ms ease",
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1873,39 +1948,41 @@ const ContainerCompanyForm = () => {
                 <button
                   type="button"
                   onClick={addModeloRow}
-                  className="w-full p-3 rounded-lg border-2 border-dashed flex items-center justify-center space-x-2 hover:bg-gray-800/50"
-                  style={{ borderColor: '#817D79' }}
+                  className="btn btn-outline btn-dashed w-full"
                 >
-                  <Plus size={20} style={{ color: '#817D79' }} />
-                  <span style={descStyle}>Agregar modelo</span>
+                  <Plus size={20} />
+                  <span>Agregar modelo</span>
                 </button>
               </div>
             </div>
           </div>
         );
+      }
 
-      case 5:
+      case 5: {
+        const domainExtra = formData.dominioOption === 'tengo' ? 1 : 0;
+        const disenosNumber = 23 + domainExtra;
+        const obrasNumber = disenosNumber + 1;
         return (
           <div className="space-y-8">
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                26. Si tiene proyectos realizados
+              <label className="form-label text-lg font-bold">
+                {obrasNumber}. Obras realizadas
               </label>
               <p className="text-sm mb-4" style={descStyle}>
-                Muestre sus mejores proyectos con imágenes y descripción
+                Casas que ya construiste y entregaste (opcional)
               </p>
 
               <div className="space-y-4">
                 {formData.proyectos.map((project, index) => (
-                  <div key={index} className="p-4 rounded-lg" style={{ border: '1px solid #817D79', backgroundColor: '#1a1a1a' }}>
+                  <div key={index} className="p-4 rounded-lg" style={{ border: '1px solid #817D79', backgroundColor: 'var(--background)' }}>
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium" style={labelStyle}>Proyecto {index + 1}</h4>
+                      <h4 className="text-sm font-medium underline">Obra {index + 1}</h4>
                       {formData.proyectos.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeProyectoRow(index)}
-                          className="p-1 rounded hover:bg-red-600/20"
-                          style={{ color: '#ef4444' }}
+                          className="btn-icon btn-ghost hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -1913,100 +1990,95 @@ const ContainerCompanyForm = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Modelo</label>
-                        <input
-                          type="text"
-                          value={project.modelo}
-                          onChange={(e) => updateProyecto(index, 'modelo', e.target.value)}
-                          onBlur={(e) => handleFieldValidation(`proyecto_${index}_modelo`, e.target.value)}
-                          placeholder="Ejemplo: Compacta"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`proyecto_${index}_modelo`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
-                        />
-                        <ErrorMessage error={validationErrors[`proyecto_${index}_modelo`]} />
-                      </div>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Ubicación</label>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold mb-2">Ubicación o nombre del proyecto</label>
                         <input
                           type="text"
                           value={project.ubicacion}
                           onChange={(e) => updateProyecto(index, 'ubicacion', e.target.value)}
                           onBlur={(e) => handleFieldValidation(`proyecto_${index}_ubicacion`, e.target.value)}
-                          placeholder="Ejemplo: Canelones"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`proyecto_${index}_ubicacion`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          placeholder="Montevideo"
+                          className="form-input"
                         />
                         <ErrorMessage error={validationErrors[`proyecto_${index}_ubicacion`]} />
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Año</label>
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Año de entrega</label>
                         <input
                           type="text"
                           value={project.anio}
                           onChange={(e) => updateProyecto(index, 'anio', e.target.value)}
-                          placeholder="Ejemplo: 2025"
-                          className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                          style={inputStyle}
+                          onBlur={(e) => handleFieldValidation(`proyecto_${index}_anio`, e.target.value)}
+                          placeholder="2023"
+                          className="form-input"
                         />
+                        <ErrorMessage error={validationErrors[`proyecto_${index}_anio`]} />
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Superficie (m²)</label>
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Metros cuadrados</label>
                         <input
                           type="text"
                           value={project.superficie}
                           onChange={(e) => updateProyecto(index, 'superficie', e.target.value)}
-                          onBlur={(e) => handleFieldValidation(`proyecto_${index}_superficie`, e.target.value)}
-                          placeholder="Ejemplo: 100 (m²)"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`proyecto_${index}_superficie`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          onBlur={(e) => handleFieldValidation(`proyecto_superficie`, e.target.value, index)}
+                          placeholder="50 m²"
+                          className="form-input"
                         />
                         <ErrorMessage error={validationErrors[`proyecto_${index}_superficie`]} />
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Dormitorios</label>
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Dormitorios</label>
                         <input
                           type="text"
                           value={project.dormitorios}
                           onChange={(e) => updateProyecto(index, 'dormitorios', e.target.value)}
-                          onBlur={(e) => handleFieldValidation(`proyecto_${index}_dormitorios`, e.target.value)}
-                          placeholder="Ejemplo: 2"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`proyecto_${index}_dormitorios`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          onBlur={(e) => handleFieldValidation(`proyecto_dormitorios`, e.target.value, index)}
+                          placeholder="2"
+                          className="form-input"
                         />
                         <ErrorMessage error={validationErrors[`proyecto_${index}_dormitorios`]} />
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Baños</label>
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Baños</label>
                         <input
                           type="text"
                           value={project.banios}
                           onChange={(e) => updateProyecto(index, 'banios', e.target.value)}
-                          onBlur={(e) => handleFieldValidation(`proyecto_${index}_banios`, e.target.value)}
-                          placeholder="Ejemplo: 1"
-                          className={`w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300 ${validationErrors[`proyecto_${index}_banios`] ? 'border-red-400' : ''}`}
-                          style={inputStyle}
+                          onBlur={(e) => handleFieldValidation(`proyecto_banios`, e.target.value, index)}
+                          placeholder="1"
+                          className="form-input"
                         />
                         <ErrorMessage error={validationErrors[`proyecto_${index}_banios`]} />
                       </div>
 
                       <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold mb-2">Breve descripción (opcional)</label>
+                        <textarea
+                          value={project.descripcion}
+                          onChange={(e) => updateProyecto(index, 'descripcion', e.target.value)}
+                          placeholder="Casa familiar con terminaciones de primera"
+                          className="form-textarea"
+                        />
+                        <ErrorMessage error={validationErrors[`proyecto_${index}_descripcion`]} />
+                      </div>
+
+                      <div className="md:col-span-2">
                         <div className="flex items-center justify-between mb-2">
-                          <label className="block text-sm font-semibold" style={labelStyle}>
-                            Imágenes del proyecto
+                          <label className="block text-sm font-semibold">
+                            Fotos de la obra
                           </label>
                           <span className="text-sm text-[#817D79]">
                             {project.images?.length || 0}/5
                           </span>
                         </div>
 
-                        <p className="text-sm text-[#817D79] mb-3">
-                          Si es posible, subí 4 fotos
+                        <p className="text-xs mb-2" style={descStyle}>
+                          Subí 4 fotos
                         </p>
 
                         {/* Grid de imágenes subidas */}
@@ -2025,11 +2097,11 @@ const ContainerCompanyForm = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveProyectoImage(index, imgIndex)}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="btn-icon btn-destructive absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                   ×
                                 </button>
-                                <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                                <div className="absolute bottom-1 left-1 bg-white/80 text-[#4B5563] text-xs px-1.5 py-0.5 rounded">
                                   {imgIndex + 1}
                                 </div>
                               </div>
@@ -2039,7 +2111,7 @@ const ContainerCompanyForm = () => {
 
                         {/* Botón de subida */}
                         {(!project.images || project.images.length < 5) && (
-                          <div className="border-2 border-dashed rounded p-6 text-center" style={{ borderColor: '#817D79' }}>
+                          <div className="border-2 border-dashed rounded-lg p-6 text-center upload-hover" style={{ borderColor: '#817D79' }}>
                             <input
                               type="file"
                               accept=".png,.jpg,.jpeg"
@@ -2048,18 +2120,37 @@ const ContainerCompanyForm = () => {
                               className="hidden"
                               id={`proyecto-images-${index}`}
                             />
-                            <label htmlFor={`proyecto-images-${index}`} className="cursor-pointer group">
+                            <label htmlFor={`proyecto-images-${index}`} className={`cursor-pointer group ${uploadingProyectos[index]?.inProgress ? 'opacity-60 pointer-events-none' : ''}`}>
                               <Upload
                                 size={24}
-                                className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                                className="mx-auto mb-2 text-[#817D79] upload-icon"
                               />
-                              <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
+                              <div className="text-sm text-[#817D79] upload-text">
                                 {project.images?.length > 0 ? 'Agregar más fotos' : 'Subir fotos'}
                               </div>
                               <div className="text-xs text-[#817D79]/70 mt-1">
                                 Podés seleccionar varias a la vez
                               </div>
                             </label>
+                            {uploadingProyectos[index]?.inProgress && uploadingProyectos[index]?.files?.length > 0 && (
+                              <div className="mt-4 text-left space-y-2">
+                                {uploadingProyectos[index].files.map((f, fi) => (
+                                  <div key={fi}>
+                                    <div className="text-xs" style={descStyle}>{f.name}… {f.percent}%</div>
+                                    <div className="h-1.5 rounded-md bg-[#e5e7eb] mt-1">
+                                      <div
+                                        className="h-1.5 rounded-md"
+                                        style={{
+                                          backgroundColor: uploadFillColor,
+                                          width: `${f.percent}%`,
+                                          transition: "background-color 200ms ease, width 300ms ease",
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2070,38 +2161,40 @@ const ContainerCompanyForm = () => {
                 <button
                   type="button"
                   onClick={addProyectoRow}
-                  className="w-full p-3 rounded-lg border-2 border-dashed flex items-center justify-center space-x-2 hover:bg-gray-800/50"
-                  style={{ borderColor: '#817D79' }}
+                  className="btn btn-outline btn-dashed w-full"
                 >
-                  <Plus size={20} style={{ color: '#817D79' }} />
-                  <span style={descStyle}>Agregar proyecto</span>
+                  <Plus size={20} />
+                  <span>Agregar proyecto</span>
                 </button>
               </div>
             </div>
           </div>
         );
+      }
 
-      case 6:
+      case 6: {
+        const domainExtra = formData.dominioOption === 'tengo' ? 1 : 0;
+        const disenosNumber = 23 + domainExtra;
+        const clientesNumber = disenosNumber + 2;
         return (
           <div className="space-y-8">
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                27. Cuéntenos sobre algunos clientes satisfechos
+              <label className="form-label text-lg font-bold">
+                {clientesNumber}. Clientes satisfechos (opcional)
               </label>
               <p className="text-sm mb-4" style={descStyle}>
-                Compartan experiencias de clientes contentos: nombres, dónde fue el proyecto, y qué comentaron sobre el trabajo</p>
+                3-6 testimonios reales ayudan mucho a tu web</p>
 
               <div className="space-y-4">
                 {formData.clientes.map((cliente, index) => (
-                  <div key={index} className="p-4 rounded-lg" style={{ border: '1px solid #817D79', backgroundColor: '#1a1a1a' }}>
+                  <div key={index} className="p-4 rounded-lg" style={{ border: '1px solid #817D79', backgroundColor: 'var(--background)' }}>
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium" style={labelStyle}>Cliente {index + 1}</h4>
+                      <h4 className="text-sm font-medium underline">Cliente {index + 1}</h4>
                       {formData.clientes.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeClienteRow(index)}
-                          className="p-1 rounded hover:bg-red-600/20"
-                          style={{ color: '#ef4444' }}
+                          className="btn-icon btn-ghost hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -2110,59 +2203,43 @@ const ContainerCompanyForm = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Nombre de cliente</label>
+                        <label className="block text-sm font-semibold mb-2">Nombre del cliente</label>
                         <input
                           type="text"
                           value={cliente.nombre}
                           onChange={(e) => updateCliente(index, 'nombre', e.target.value)}
-                          onBlur={() => handleFieldValidation(`cliente_${index}_nombre`, cliente.nombre)}
-                          placeholder="Ejemplo: Rodrigo M."
-                          className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                          style={{
-                            ...inputStyle,
-                            borderColor: validationErrors[`cliente_${index}_nombre`] ? '#ef4444' : inputStyle.border
-                          }}
+                          placeholder="Juan Pérez"
+                          className="form-input"
                         />
                         <ErrorMessage error={validationErrors[`cliente_${index}_nombre`]} />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Ubicación</label>
+                        <label className="block text-sm font-semibold mb-2">Zona del proyecto</label>
                         <input
                           type="text"
                           value={cliente.ubicacion}
                           onChange={(e) => updateCliente(index, 'ubicacion', e.target.value)}
-                          onBlur={() => handleFieldValidation(`cliente_${index}_ubicacion`, cliente.ubicacion)}
-                          placeholder="Ejemplo: Maldonado"
-                          className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                          style={{
-                            ...inputStyle,
-                            borderColor: validationErrors[`cliente_${index}_ubicacion`] ? '#ef4444' : inputStyle.border
-                          }}
+                          placeholder="Montevideo"
+                          className="form-input"
                         />
                         <ErrorMessage error={validationErrors[`cliente_${index}_ubicacion`]} />
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>Testimonio</label>
+                        <label className="block text-sm font-semibold mb-2">Testimonio</label>
                         <textarea
                           value={cliente.testimonio}
                           onChange={(e) => updateCliente(index, 'testimonio', e.target.value)}
-                          onBlur={() => handleFieldValidation(`cliente_${index}_testimonio`, cliente.testimonio)}
-                          placeholder="Ejemplo: Buscaba algo moderno para mi terreno en la costa. El resultado final superó el render que me habían mostrado. 
-                          Excelente calidad y atención al detalle."
-                          className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                          style={{
-                            ...inputStyle,
-                            borderColor: validationErrors[`cliente_${index}_testimonio`] ? '#ef4444' : inputStyle.border
-                          }}
+                          placeholder="¿Qué dijeron sobre tu trabajo?"
+                          className="form-textarea"
                         />
                         <ErrorMessage error={validationErrors[`cliente_${index}_testimonio`]} />
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                          Imagen
+                        <label className="block text-sm font-semibold mb-2">
+                          Foto del cliente o del proyecto (opcional)
                         </label>
 
                         {/* Preview si hay imagen */}
@@ -2174,14 +2251,14 @@ const ContainerCompanyForm = () => {
                                 alt="Cliente"
                                 width={128}
                                 height={128}
-                                className="w-32 h-32 object-cover rounded border-2"
+                                className="w-32 h-32 object-cover rounded-md border-2"
                                 style={{ borderColor: '#817D79' }}
                                 unoptimized
                               />
                               <button
                                 type="button"
                                 onClick={() => handleRemoveClienteImage(index)}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="btn-icon btn-destructive absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 ×
                               </button>
@@ -2191,23 +2268,38 @@ const ContainerCompanyForm = () => {
 
                         {/* Botón de subida */}
                         {!cliente.image && (
-                          <div className="border-2 border-dashed rounded p-4 text-center" style={{ borderColor: '#817D79' }}>
+                          <div className="border-2 border-dashed rounded-lg p-4 text-center upload-hover" style={{ borderColor: '#817D79' }}>
                             <input
                               type="file"
-                              accept=".png,.jpg,.jpeg"
+                              accept=".png,.jpg,.jpeg,.gif,.webp"
                               onChange={async (e) => e.target.files && await handleClienteImageChange(index, e.target.files[0])}
                               className="hidden"
                               id={`cliente-image-${index}`}
                             />
-                            <label htmlFor={`cliente-image-${index}`} className="cursor-pointer group">
+                            <label htmlFor={`cliente-image-${index}`} className={`cursor-pointer group ${uploadingClientes[index]?.inProgress ? 'opacity-60 pointer-events-none' : ''}`}>
                               <Upload
                                 size={20}
-                                className="mx-auto mb-2 text-[#817D79] group-hover:text-white transition-colors duration-200"
+                                className="mx-auto mb-2 text-[#817D79] upload-icon"
                               />
-                              <div className="text-sm text-[#817D79] group-hover:text-white transition-colors duration-200">
-                                Subir imagen
+                              <div className="text-sm text-[#817D79] upload-text">
+                                {uploadingClientes[index]?.name ? `Subiendo ${uploadingClientes[index]?.name}` : 'Subir imagen'}
                               </div>
                             </label>
+                            {uploadingClientes[index]?.inProgress && (
+                              <div className="mt-4 text-left space-y-2">
+                                <div className="text-xs" style={descStyle}>{uploadingClientes[index]?.name}… {uploadingClientes[index]?.percent}%</div>
+                                <div className="h-1.5 rounded-md bg-[#e5e7eb] mt-1">
+                                  <div
+                                    className="h-1.5 rounded-md"
+                                    style={{
+                                      backgroundColor: uploadFillColor,
+                                      width: `${uploadingClientes[index]?.percent}%`,
+                                      transition: "background-color 200ms ease, width 300ms ease",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2218,23 +2310,25 @@ const ContainerCompanyForm = () => {
                 <button
                   type="button"
                   onClick={addClienteRow}
-                  className="w-full p-3 rounded-lg border-2 border-dashed flex items-center justify-center space-x-2 hover:bg-gray-800/50"
-                  style={{ borderColor: '#817D79' }}
+                  className="btn btn-outline btn-dashed w-full"
                 >
-                  <Plus size={20} style={{ color: '#817D79' }} />
-                  <span style={descStyle}>Agregar cliente</span>
+                  <Plus size={20} />
+                  <span>Agregar cliente</span>
                 </button>
               </div>
             </div>
           </div>
         );
+      }
 
-      case 7:
+      case 7: {
+        const domainExtra = formData.dominioOption === 'tengo' ? 1 : 0;
+        const calcBase = 26 + domainExtra;
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                28. ¿Quieren incluir una calculadora automática de precios en la web?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                {calcBase}. ¿Quieren incluir una calculadora automática de precios en la web?<span className="text-gray-400 ml-1">*</span>
               </label>
               <div className="space-y-3">
                 {[
@@ -2258,7 +2352,7 @@ const ContainerCompanyForm = () => {
                       }}
                       required
                     />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
+                    <span className="text-sm group-hover:opacity-80 transition-opacity">
                       {option.label}
                     </span>
                   </label>
@@ -2267,149 +2361,106 @@ const ContainerCompanyForm = () => {
               <ErrorMessage error={validationErrors.calculadoraOption} />
             </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                29. Si eligió &quot;Sí&quot;, indique el rango de metros cuadrados que manejan
-              </label>
-              <p className="text-sm mb-3" style={descStyle}>Ejemplo: 35-100 m²</p>
-              <textarea
-                name="rangoMetros"
-                value={formData.rangoMetros}
-                onChange={handleInputChange}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                30. Si eligió &quot;Sí&quot;, indique el precio por m² por cada categoría
-              </label>
-              <p className="text-sm mb-3" style={descStyle}>Ejemplo: Categoría Básica: USD 800/m², Categoría Estándar: USD 1000/m², Categoría Premium: USD 1200/m²</p>
-              <textarea
-                name="precioCategoria"
-                value={formData.precioCategoria}
-                onChange={handleInputChange}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                31. ¿Tienen precios diferenciales según la zona geográfica?<span style={asteriskStyle}>*</span>
-              </label>
-              <div className="space-y-3">
-                {[
-                  { precioDifOpcion: "si", label: "Sí" },
-                  { precioDifOpcion: "no", label: "No" }
-                ].map((option) => (
-                  <label key={option.precioDifOpcion} className="flex items-center space-x-3 cursor-pointer group">
-                    <input
-                      type="radio"
-                      name="precioDifOpcion"
-                      value={option.precioDifOpcion}
-                      checked={formData.precioDifOpcion === option.precioDifOpcion}
-                      onChange={(e) => {
-                        handleInputChange(e);
-                        handleFieldValidation('precioDifOpcion', e.target.value);
-                      }}
-                      className="w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300"
-                      style={{
-                        borderColor: "#F0EFED",
-                        accentColor: "#817D79"
-                      }}
-                      required
-                    />
-                    <span className="text-sm group-hover:opacity-80 transition-opacity" style={labelStyle}>
-                      {option.label}
-                    </span>
+            {/* Preguntas condicionales cuando calculadoraOption es 'si' */}
+            {formData.calculadoraOption === 'si' && (
+              <>
+                <div>
+                  <label className="form-label text-lg font-bold">
+                    {calcBase + 1}. ¿Cómo calculan los precios de las casas?<span className="text-gray-400 ml-1">*</span>
                   </label>
-                ))}
-              </div>
-              <ErrorMessage error={validationErrors.precioDifOpcion} />
-            </div>
+                  <div className="space-y-3">
+                    {[
+                      { value: "metro_cuadrado", label: "Por metro cuadrado" },
+                      { value: "modelo_fijo", label: "Por modelo/diseño fijo" },
+                      { value: "personalizado", label: "Personalizado según proyecto" },
+                      { value: "otro", label: "Otro (explicar)" }
+                    ].map((option) => (
+                      <label key={option.value} className="flex items-center space-x-3 cursor-pointer group">
+                        <input
+                          type="radio"
+                          name="metodoCalculo"
+                          value={option.value}
+                          checked={formData.metodoCalculo === option.value}
+                          onChange={(e) => {
+                            handleInputChange(e);
+                            handleFieldValidation('metodoCalculo', e.target.value);
+                          }}
+                          className="w-4 h-4 text-white bg-transparent border-2 focus:ring-2 focus:ring-gray-300"
+                          style={{
+                            borderColor: "#F0EFED",
+                            accentColor: "#817D79"
+                          }}
+                          required
+                        />
+                        <span className="text-sm group-hover:opacity-80 transition-opacity">
+                          {option.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <ErrorMessage error={validationErrors.metodoCalculo} />
+                </div>
 
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                32. Si varía según ubicación, especifique los ajustes por zona
-              </label>
-              <p className="text-sm mb-3" style={descStyle}>Ejemplo: Montevideo: USD +100/m², Canelones: precio base, Maldonado: USD +150/m², Otras zonas: USD +50/m²</p>
-              <textarea
-                name="precioDifValor"
-                value={formData.precioDifValor}
-                onChange={handleInputChange}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
-              />
-            </div>
+                <div>
+                  <label className="form-label text-lg font-bold">
+                    {calcBase + 2}. Explicá cómo funciona el cálculo de precios<span className="text-gray-400 ml-1">*</span>
+                  </label>
+                  <textarea
+                    name="explicacionCalculo"
+                    value={formData.explicacionCalculo}
+                    onChange={handleInputChange}
+                    onFocus={() => markFieldAsTouched('explicacionCalculo')}
+                    onBlur={(e) => handleFieldValidation('explicacionCalculo', e.target.value)}
+                    placeholder="Explicá cómo calculás los precios para que podamos configurar la calculadora correctamente. Incluí rangos de m², precios, categorías y cualquier factor que influya en el costo final. Ejemplo: Hasta 50m² = $X/m², 51-100m² = $Y/m². Extras como deck se cotizan aparte."
+                    className={`form-textarea ${validationErrors.explicacionCalculo ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    required
+                  />
+                  <ErrorMessage error={validationErrors.explicacionCalculo} />
+                </div>
+              </>
+            )}
           </div>
         );
+      }
 
-      case 8:
+      case 8: {
+        const domainExtra = formData.dominioOption === 'tengo' ? 1 : 0;
+        const calcBase = 26 + domainExtra;
+        const step8Base = calcBase + (formData.calculadoraOption === 'si' ? 3 : 1);
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                33. ¿Tienen alguna frase o mensaje que los identifique como empresa?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                {step8Base}. Frase principal para la web (opcional)
               </label>
-              <p className="text-sm mb-3" style={descStyle}>Si tienen un slogan o frase que usen habitualmente, compártanla</p>
+              <p className="text-sm font-medium mb-3" style={descStyle}>Mensaje que aparecerá en el banner principal</p>
               <textarea
                 name="frase"
                 value={formData.frase}
                 onChange={handleInputChange}
                 onFocus={() => markFieldAsTouched('frase')}
-                onBlur={(e) => handleFieldValidation('frase', e.target.value)}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
-                required
+                placeholder="Construimos tu casa container ideal"
+                className="form-textarea"
               />
-              <ErrorMessage error={validationErrors.frase} />
             </div>
 
             <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                34. ¿Cómo les gusta describir su trabajo cuando hablan con clientes?<span style={asteriskStyle}>*</span>
+              <label className="form-label text-lg font-bold">
+                {step8Base + 1}. Información importante (opcional)
               </label>
-              <p className="text-sm mb-3" style={descStyle}>¿Qué les dicen cuando les preguntan qué hacen? ¿Cómo se describen en pocas palabras?</p>
-              <textarea
-                name="pitch"
-                value={formData.pitch}
-                onChange={handleInputChange}
-                onFocus={() => markFieldAsTouched('pitch')}
-                onBlur={(e) => handleFieldValidation('pitch', e.target.value)}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
-                required
-              />
-              <ErrorMessage error={validationErrors.pitch} />
-            </div>
-
-            <div>
-              <label className="block text-lg font-bold mb-3" style={labelStyle}>
-                35. ¿Hay algo importante sobre su empresa que quieran que sea visible en la web?<span style={asteriskStyle}>*</span>
-              </label>
-              <p className="text-sm mb-3" style={descStyle}>Certificaciones, premios, servicios especiales, garantías, o cualquier información que consideren relevante para sus clientes</p>
+              <p className="text-sm font-medium mb-3" style={descStyle}>Certificaciones, garantías, servicios especiales</p>
               <textarea
                 name="importante"
                 value={formData.importante}
                 onChange={handleInputChange}
                 onFocus={() => markFieldAsTouched('importante')}
-                onBlur={(e) => handleFieldValidation('importante', e.target.value)}
-                placeholder="Tu respuesta"
-                className="w-full rounded-md px-3 py-2 text-sm bg-transparent text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                style={inputStyle}
-                required
+                placeholder="Garantía de 10 años en estructura"
+                className="form-textarea"
               />
-              <ErrorMessage error={validationErrors.importante} />
             </div>
           </div>
         );
+      }
 
       default:
         return null;
@@ -2417,56 +2468,66 @@ const ContainerCompanyForm = () => {
   };
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: "#191919" }}>
+    <div className="min-h-screen pb-12 theme-light paper-texture" style={{ backgroundColor: "var(--background)" }}>
       <div className="max-w-xl mx-auto">
-        <div className="mb-8 pt-28">
-          <h1 className="text-[40px] font-bold leading-tight mb-2" style={labelStyle}>
-            Información para desarrollo web
-          </h1>
-          <p style={labelStyle}>Para crear tu web personalizada necesitamos la siguiente información</p>
-        </div>
-
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium" style={labelStyle}>
-              Paso {currentStep + 1} de {totalSteps}
-            </span>
-            <span className="text-sm" style={descStyle}>
-              {steps[currentStep].title}
-            </span>
+        {showHeader && (
+          <div className="sticky top-0 z-10 border-b border-[#817D79]/20 px-6 min-h-28 flex flex-col items-start justify-center py-4 text-left gap-1" style={{ backgroundColor: "var(--background)" }}>
+            <h1 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>
+              Información para desarrollo web
+            </h1>
+            <p className="text-sm text-[#817D79] mt-1">
+              Los campos marcados con * son obligatorios.
+              El resto son opcionales pero ayudan a que tu web sea más completa.
+            </p>
           </div>
-          <div className="w-full rounded-full h-2" style={{ backgroundColor: "#30302E", opacity: 0.8 }}>
+        )}
+
+        <div
+          className="sticky z-20 border-b border-[#817D79]/20 bg-[#f7f5f3]"
+          style={{
+            top: showHeader ? "7rem" : "0"
+          }}
+        >
+          <div className="pt-9 pb-6">
             <div
-              className="h-2 rounded-full transition-all duration-300"
-              style={{ backgroundColor: "#F0EFED", width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-            ></div>
+              className="flex items-center justify-start mb-2 px-6"
+              aria-label={`Paso ${Math.max(1, Math.min(currentStep + 1, totalSteps))} de ${totalSteps}`}
+            >
+              <label className="form-label text-lg font-bold text-gray-500">
+                {steps[currentStep]?.title}
+              </label>
+            </div>
+
+            <div
+              className="w-full h-4 rounded-md border border-gray-300 bg-gray-100 mx-6"
+              style={{
+                padding: "3px",
+                width: "calc(100% - 3rem)"
+              }}
+            >
+              <div
+                className="h-full rounded-md transition-all duration-300"
+                style={{
+                  backgroundColor: progressFillColor(progressPercent),
+                  width: `${Math.max(progressPercent, 1)}%`,
+                  transition: "background-color 200ms ease, width 300ms ease",
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {renderStep()}
+        <div>
+          <div className="pt-6 px-6">
+            {renderStep()}
+          </div>
 
-          <div className="flex justify-between items-center pt-8">
+          <div className="flex justify-between items-center pt-8 px-6">
             <button
               type="button"
               onClick={prevStep}
               disabled={currentStep === 0}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              style={{
-                backgroundColor: currentStep === 0 ? "transparent" : "#30302E",
-                color: "#F0EFED",
-                border: "1px solid #30302E",
-              }}
-              onMouseEnter={(e) => {
-                if (currentStep !== 0 && !e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = "#3a3936";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (currentStep !== 0 && !e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = "#30302E";
-                }
-              }}
+              className="btn btn-outline"
             >
               <ChevronLeft size={20} />
               <span>Anterior</span>
@@ -2474,19 +2535,9 @@ const ContainerCompanyForm = () => {
 
             {currentStep === totalSteps - 1 ? (
               <button
-                type="submit"
-                className="flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer hover:brightness-110"
-                style={{ backgroundColor: "#30302E", color: "#F0EFED", border: "1px solid #30302E" }}
-                onMouseEnter={(e) => {
-                  if (currentStep !== 0) {
-                    e.currentTarget.style.backgroundColor = "#3a3936";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentStep !== 0) {
-                    e.currentTarget.style.backgroundColor = "#30302E";
-                  }
-                }}
+                type="button"
+                onClick={handleSubmit}
+                className="btn btn-secondary"
               >
                 <span>Enviar</span>
               </button>
@@ -2494,25 +2545,14 @@ const ContainerCompanyForm = () => {
               <button
                 type="button"
                 onClick={nextStep}
-                className="flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer hover:brightness-110"
-                style={{ backgroundColor: "#30302E", color: "#F0EFED", border: "1px solid #30302E" }}
-                onMouseEnter={(e) => {
-                  if (currentStep !== 0) {
-                    e.currentTarget.style.backgroundColor = "#3a3936";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentStep !== 0) {
-                    e.currentTarget.style.backgroundColor = "#30302E";
-                  }
-                }}
+                className="btn btn-primary"
               >
                 <span>Siguiente</span>
                 <ChevronRight size={20} />
               </button>
             )}
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Pantalla de confirmación */}

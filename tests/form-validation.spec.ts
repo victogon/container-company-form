@@ -2,16 +2,20 @@ import { test, expect } from '@playwright/test';
 import { RealImageUtils } from './real-image-utils';
 
 test.describe('Container Company Form - Validación', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
+test.beforeEach(async ({ page }) => {
+  await page.goto('/?test=true');
+});
 
   test('debe mostrar el formulario correctamente', async ({ page }) => {
-    // Verificar el título correcto
-    await expect(page.locator('h1')).toContainText('Información para desarrollo web');
+    // Verificar el título correcto en la pantalla inicial
+    await expect(page.locator('h1')).toContainText('Información');
+    await expect(page.locator('h1')).toContainText('para desarrollo web');
     
-    // Verificar que estamos en el paso 1 de 9
-    await expect(page.locator('text=Paso 1 de 9')).toBeVisible();
+    // Hacer clic en "Comenzar" para iniciar el formulario
+    await page.click('button:has-text("Comenzar")');
+    
+    // Verificar que estamos en el primer paso
+    await expect(page.locator('text=Datos básicos')).toBeVisible();
     
     // Verificar campos principales
     await expect(page.locator('input[name="companyName"]')).toBeVisible();
@@ -20,6 +24,9 @@ test.describe('Container Company Form - Validación', () => {
   });
 
   test('debe validar campos obligatorios', async ({ page }) => {
+    // Hacer clic en "Comenzar" para iniciar el formulario
+    await page.click('button:has-text("Comenzar")');
+    
     // Intentar avanzar sin llenar campos
     await page.click('button:has-text("Siguiente")');
     
@@ -29,6 +36,9 @@ test.describe('Container Company Form - Validación', () => {
   });
 
   test('debe validar formato de email', async ({ page }) => {
+    // Hacer clic en "Comenzar" para iniciar el formulario
+    await page.click('button:has-text("Comenzar")');
+    
     // Llenar email con formato inválido
     await page.fill('input[name="email"]', 'email-invalido');
     
@@ -54,8 +64,11 @@ test.describe('Container Company Form - Validación', () => {
   });
 
   test('debe permitir navegación entre pasos', async ({ page }) => {
-    // Verificar que empezamos en el paso 1
-    await expect(page.locator('text=Paso 1 de 9')).toBeVisible({ timeout: 10000 });
+    // Hacer clic en "Comenzar" para iniciar el formulario
+    await page.click('button:has-text("Comenzar")');
+    
+    // Verificar que empezamos en el primer paso
+    await expect(page.locator('text=Datos básicos')).toBeVisible({ timeout: 10000 });
     
     // Llenar campos obligatorios del primer paso
     await page.fill('input[name="companyName"]', 'Test Company');
@@ -87,14 +100,14 @@ test.describe('Container Company Form - Validación', () => {
     await page.click('button:has-text("Siguiente")');
     
     // Esperar a que la navegación se complete y verificar que estamos en el paso 2
-    await expect(page.locator('span:has-text("Paso 2 de 9")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Contacto y ubicación')).toBeVisible({ timeout: 15000 });
     
     // Verificar que el botón "Anterior" funciona
     await page.click('button:has-text("Anterior")');
-    await expect(page.locator('span:has-text("Paso 1 de 9")')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Datos básicos')).toBeVisible({ timeout: 10000 });
     
     // Volver al paso 2 para confirmar que la navegación funciona en ambas direcciones
     await page.click('button:has-text("Siguiente")');
-    await expect(page.locator('span:has-text("Paso 2 de 9")')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Contacto y ubicación')).toBeVisible({ timeout: 10000 });
   });
 });

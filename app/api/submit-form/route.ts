@@ -1,5 +1,6 @@
 // app/api/submit-form/route.ts
 import GoogleSheetsService from '../../../utils/google-sheets-service';
+import { notifySlack, notifyEmail } from '../../../utils/notifications';
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -67,8 +68,8 @@ export async function POST(request: NextRequest) {
                 try {
                     data[field] = JSON.parse(data[field]);
                     console.log(`Campo ${field} parseado correctamente`);
-                } catch (e) {
-                    console.warn(`Error parseando ${field}:`, e);
+                } catch {
+                    console.warn(`Error parseando ${field}`);
                     data[field] = [];
                 }
             }
@@ -199,16 +200,24 @@ export async function POST(request: NextRequest) {
             console.log('=== FIN DIAGNÓSTICO ===');
 
             console.log('Formulario procesado exitosamente con Google Sheets');
+            const responseData = {
+                formType: formType,
+                sheetName: result.sheetName,
+                companyName: data.companyName as string,
+                contactPerson: data.contactPerson as string,
+                email: data.email as string,
+                phone: data.phone as string,
+                filesUploaded: cloudinaryImagesCount,
+                mode: 'GOOGLE_SHEETS',
+                timestamp: new Date().toISOString(),
+            };
+            // Notificar por Slack y Email si está configurado
+            await notifySlack(responseData);
+            await notifyEmail(responseData);
             return Response.json({
                 success: true,
                 message: result.message,
-                data: {
-                    formType: formType,
-                    sheetName: result.sheetName,
-                    companyName: data.companyName,
-                    filesUploaded: cloudinaryImagesCount,
-                    mode: 'GOOGLE_SHEETS'
-                }
+                data: responseData,
             });
         } catch (sheetsError) {
             console.warn('Error con Google Sheets, activando modo de fallback:', sheetsError instanceof Error ? sheetsError.message : 'Unknown error');
@@ -290,20 +299,23 @@ export async function POST(request: NextRequest) {
             console.log('Archivos recibidos:', Object.keys(files).length);
             console.log(`Imágenes de Cloudinary contadas: ${cloudinaryImagesCount}`);
 
+            const fallbackData = {
+                formType: formType,
+                companyName: data.companyName as string,
+                contactPerson: data.contactPerson as string,
+                email: data.email as string,
+                phone: data.phone as string,
+                filesUploaded: cloudinaryImagesCount,
+                fieldsProcesados: Object.keys(data).length,
+                timestamp: new Date().toISOString(),
+                mode: 'FALLBACK'
+            };
+            await notifySlack(fallbackData);
+            await notifyEmail(fallbackData);
             return Response.json({
                 success: true,
                 message: `Formulario ${formType} recibido exitosamente. Los datos han sido guardados y serán procesados cuando el servicio esté disponible.`,
-                data: {
-                    formType: formType,
-                    companyName: data.companyName,
-                    contactPerson: data.contactPerson,
-                    email: data.email,
-                    phone: data.phone,
-                    filesUploaded: cloudinaryImagesCount,
-                    fieldsProcesados: Object.keys(data).length,
-                    timestamp: new Date().toISOString(),
-                    mode: 'FALLBACK'
-                },
+                data: fallbackData,
                 warning: 'El servicio de Google Sheets no está disponible temporalmente. Sus datos han sido recibidos correctamente.'
             });
         }

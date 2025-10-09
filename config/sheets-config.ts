@@ -12,15 +12,15 @@ interface FileConfig {
 export const SHEET_CONFIGS: { [key: string]: SheetConfig } = {
     containers: {
         sheetName: 'Containers',
-        range: 'Containers!A:AJ', // 36 columnas: A hasta AJ
+        range: 'Containers!A:AJ', // 32 columnas
         columns: [
             'timestamp', 'companyName', 'contactPerson', 'phone', 'email',
-            'logoUrl', 'brandColors', 'address', 'businessHours', 'socialMedia',
+            'logo', 'brandColors', 'address', 'businessHours', 'socialMedia',
             'whatsappNumber', 'workAreas', 'foundedYear', 'teamSize', 'specialties',
             'companyStory', 'achievements', 'workStyle', 'workTime', 'diferencialCompetitivo',
-            'ventajas', 'rangoPrecios', 'proyectosRealizados', 'dominioOption', 'dominioName',
-            'calculadoraOption', 'rangoMetros', 'precioCategoria', 'precioDifOpcion', 'precioDifValor',
-            'frase', 'pitch', 'importante', 'modelosData', 'proyectosData', 'clientesData'
+            'ventajas', 'proyectosRealizados', 'dominioOption', 'dominioName', 'modelos',
+            'proyectos', 'clientes', 'calculadoraOption', 'metodoCalculo', 'explicacionCalculo',
+            'frase', 'importante'
         ]
     }
 };

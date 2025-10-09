@@ -451,17 +451,7 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         console.log('   📊 Pregunta 28: Calculadora automática');
         await page.check('input[name="calculadoraOption"][value="si"]');
 
-        // 29. Rango de metros cuadrados (condicional)
-        console.log('   📏 Pregunta 29: Rango de metros cuadrados');
-        await page.fill('textarea[name="rangoMetros"]', '35-150 m²');
-
-        // 30. Precio por m² por categoría (condicional)
-        console.log('   💵 Pregunta 30: Precios por categoría');
-        await page.fill('textarea[name="precioCategoria"]', 'Categoría Básica: USD 650/m²\nCategoría Estándar: USD 850/m²\nCategoría Premium: USD 1100/m²\nCategoría Luxury: USD 1400/m²');
-
-        // 31. ¿Tienen precios diferenciales según la zona geográfica? (OBLIGATORIO)
-        console.log('   🗺️ Pregunta 31: Precios diferenciales por zona');
-        await page.check('input[name="precioDifOpcion"][value="si"]');
+        // Los campos rangoMetros, precioCategoria y precioDifOpcion fueron removidos del formulario
 
         // 32. Ajustes por zona (condicional)
         console.log('   📍 Pregunta 32: Ajustes por zona geográfica');
@@ -503,7 +493,7 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
             }
         });
 
-        await page.click('button[type="submit"]:has-text("Enviar")');
+        await page.click('button:has-text("Enviar")');
 
         // Esperar un poco para ver si aparece alguna alerta (optimizado)
         await page.waitForTimeout(500);
@@ -649,8 +639,8 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         // 28. ¿Quieren incluir una calculadora automática de precios en la web? (OBLIGATORIO)
         await page.check('input[name="calculadoraOption"][value="no"]');
 
-        // 31. ¿Tienen precios diferenciales según la zona geográfica? (OBLIGATORIO)
-        await page.check('input[name="precioDifOpcion"][value="no"]');
+        // Precio diferencial por zona: se muestra solo si la calculadora está habilitada
+        // Al seleccionar "no" en la calculadora, este bloque no aparece y no es necesario interactuar
 
         await page.click('button:has-text("Siguiente")');
         await expect(page.locator('text=Paso 9 de 9')).toBeVisible({ timeout: 10000 });
@@ -667,7 +657,7 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
         // 35. ¿Hay algo importante sobre su empresa que quieran que sea visible en la web? (OBLIGATORIO)
         await page.fill('textarea[name="importante"]', 'Empresa nueva con ganas de crecer en el mercado');
 
-        await page.click('button[type="submit"]:has-text("Enviar")');
+        await page.click('button:has-text("Enviar")');
 
         // Verificar que aparece la pantalla de confirmación
         await expect(page.locator('text=¡Formulario enviado!')).toBeVisible({ timeout: 30000 });
@@ -711,8 +701,8 @@ test.describe('Container Company Form - Envío Completo con Imágenes Reales', (
             console.log('💡 Los tests usarán imágenes simuladas como fallback');
         }
 
-        // Ir a la página para que el test no falle
-        await page.goto('/');
+        // Ir a la página en modo test para que el test no falle
+        await page.goto('/?test=true');
         await expect(page.locator('h1')).toBeVisible();
 
         console.log('✅ Test de información completado');

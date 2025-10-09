@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e8]: Obras realizadas
+      - generic [ref=e11]:
+        - generic [ref=e14]:
+          - generic [ref=e15]: 24. Obras realizadas
+          - paragraph [ref=e16]: Casas que ya construiste y entregaste (opcional)
+          - generic [ref=e17]:
+            - generic [ref=e18]:
+              - heading "Obra 1" [level=4] [ref=e20]
+              - generic [ref=e21]:
+                - generic [ref=e22]:
+                  - generic [ref=e23]: Ubicación o nombre del proyecto
+                  - textbox "Montevideo" [ref=e24]
+                - generic [ref=e25]:
+                  - generic [ref=e26]: Año de entrega
+                  - textbox "2023" [ref=e27]
+                - generic [ref=e28]:
+                  - generic [ref=e29]: Metros cuadrados
+                  - textbox "50 m²" [ref=e30]
+                - generic [ref=e31]:
+                  - generic [ref=e32]: Dormitorios
+                  - textbox "2" [ref=e33]
+                - generic [ref=e34]:
+                  - generic [ref=e35]: Baños
+                  - textbox "1" [ref=e36]
+                - generic [ref=e37]:
+                  - generic [ref=e38]: Breve descripción (opcional)
+                  - textbox "Casa familiar con terminaciones de primera" [ref=e39]
+                - generic [ref=e40]:
+                  - generic [ref=e41]:
+                    - generic [ref=e42]: Fotos de la obra
+                    - generic [ref=e43]: 0/5
+                  - paragraph [ref=e44]: Subí 4 fotos
+                  - generic [ref=e46] [cursor=pointer]:
+                    - img [ref=e47] [cursor=pointer]
+                    - generic [ref=e50] [cursor=pointer]: Subir fotos
+                    - generic [ref=e51] [cursor=pointer]: Podés seleccionar varias a la vez
+            - button "Agregar proyecto" [ref=e52] [cursor=pointer]:
+              - img [ref=e53] [cursor=pointer]
+              - generic [ref=e54] [cursor=pointer]: Agregar proyecto
+        - generic [ref=e55]:
+          - button "Anterior" [ref=e56] [cursor=pointer]:
+            - img [ref=e57] [cursor=pointer]
+            - generic [ref=e59] [cursor=pointer]: Anterior
+          - button "Siguiente" [active] [ref=e60] [cursor=pointer]:
+            - generic [ref=e61] [cursor=pointer]: Siguiente
+            - img [ref=e62] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e69] [cursor=pointer]:
+    - img [ref=e70] [cursor=pointer]
+  - alert [ref=e73]
+```
