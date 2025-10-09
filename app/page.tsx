@@ -17,18 +17,18 @@ function HomeContent() {
   useEffect(() => {
     if (!started) {
       // Prevenir scroll en la página inicial
-      document.body.style.overflow = 'hidden';
-      document.body.style.height = '100vh';
+      document.body.classList.add('body-no-scroll');
+      document.documentElement.style.overflow = 'hidden';
     } else {
       // Restaurar scroll cuando se inicia el formulario
-      document.body.style.overflow = '';
-      document.body.style.height = '';
+      document.body.classList.remove('body-no-scroll');
+      document.documentElement.style.overflow = '';
     }
 
     // Cleanup al desmontar el componente
     return () => {
-      document.body.style.overflow = '';
-      document.body.style.height = '';
+      document.body.classList.remove('body-no-scroll');
+      document.documentElement.style.overflow = '';
     };
   }, [started]);
 

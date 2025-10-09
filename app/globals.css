@@ -124,6 +124,19 @@ input[type="radio"], input[type="checkbox"] {
 .initial-page {
   height: 100vh;
   overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Clases para controlar scroll del body */
+.body-no-scroll {
+  overflow: hidden !important;
+  height: 100vh !important;
+  position: fixed !important;
+  width: 100% !important;
 }
 
 .form-radio-label {

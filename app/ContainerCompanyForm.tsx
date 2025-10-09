@@ -2477,7 +2477,7 @@ https://facebook.com/tuempresa"
         )}
 
         <div
-          className="sticky z-20 border-b border-[#817D79]/20 bg-[#f7f5f3]"
+          className="fixed z-20 border-b border-[#817D79]/20 bg-[#f7f5f3] w-full left-0"
           style={{
             top: showHeader ? "7rem" : "0"
           }}
@@ -2511,7 +2511,7 @@ https://facebook.com/tuempresa"
           </div>
         </div>
 
-        <div>
+        <div style={{ paddingTop: showHeader ? "13rem" : "6rem" }}>
           <div className="pt-6 px-6">
             {renderStep()}
           </div>
